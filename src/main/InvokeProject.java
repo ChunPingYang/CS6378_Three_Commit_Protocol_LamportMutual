@@ -24,12 +24,12 @@ public class InvokeProject {
 			extractFromConfigFile = new ReadConfigFile(true);
 			coordinatorProcess = new Coordinator();
 			coordinatorProcess = extractFromConfigFile.getConfigFileData(args[1]);
-//			coordinatorProcess.start();
+			coordinatorProcess.start();
 		} else {
 			extractFromConfigFile = new ReadConfigFile(false);
 			otherProcess = new Cohort();
 			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[0]);
-//			otherProcess.start();
+			otherProcess.start();
 		}
 	}
 }

@@ -1,12 +1,21 @@
 package listener;
 
+import model.StringConstants;
 import utility.SharedDataAmongCoordThreads;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 
 public class Coordinator {
+
+    /**
+     * Test
+     */
+    private PrintWriter printWriter = null;
 
     /**
      * Variables required for establishing connections among processes and
@@ -16,6 +25,8 @@ public class Coordinator {
     private static int assignedProcessId;
     private static HashMap<Integer, Socket> connectionsToCoordinator;
 
+    private DataInputStream inputStream = null;
+    private Socket socket = null;
     private ServerSocket coordinatorListenSocket = null;
 
     /**
@@ -62,10 +73,32 @@ public class Coordinator {
             coordinatorListenSocket = new ServerSocket(PORT);
 //        coordinatorListenSocket.setReuseAddress(true);  //https://blog.csdn.net/qq_34444097/article/details/78966654
 //        coordinatorListenSocket.setSoTimeout(1000 * 60 * 60);
+            socket = coordinatorListenSocket.accept();
+            inputStream = new DataInputStream(socket.getInputStream());
+            printWriter = new PrintWriter(socket.getOutputStream());
+            printWriter.println(StringConstants.SPACE);
+            printWriter.flush();
 
+            stopConnection();
 
         }catch(Exception e){
             e.printStackTrace();
+        }
+    }
+
+    public void stopConnection(){
+        try {
+            inputStream.close();
+            printWriter.close();
+            socket.close();
+        }catch(IOException e){
+            e.printStackTrace();
+        }finally {
+            try {
+                coordinatorListenSocket.close();
+            }catch(IOException e){
+                e.printStackTrace();
+            }
         }
     }
 

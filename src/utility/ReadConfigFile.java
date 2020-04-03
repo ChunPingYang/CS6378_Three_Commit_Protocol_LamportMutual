@@ -27,7 +27,7 @@ public class ReadConfigFile {
 	}
 
 	public Coordinator getConfigFileData(String fileName) {
-		fileLocation = System.getProperty("user.dir") + "/" + fileName;
+		fileLocation = System.getProperty("user.dir") + "/src/" + fileName;
 		try {
 			readConfigFile = new BufferedReader(new FileReader(fileLocation));
 			try {
@@ -61,7 +61,7 @@ public class ReadConfigFile {
 
 	// If the invoked process is not a coordinator
 	public Cohort getConfigDataForProcess(String fileName) {
-		fileLocation = System.getProperty("user.dir") + "/" + fileName;
+		fileLocation = System.getProperty("user.dir") + "/src/" + fileName;
 		try {
 			readConfigFile = new BufferedReader(new FileReader(fileLocation));
 			try {

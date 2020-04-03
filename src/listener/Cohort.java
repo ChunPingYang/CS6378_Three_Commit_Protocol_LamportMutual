@@ -1,8 +1,10 @@
 package listener;
 
+import model.StringConstants;
 import utility.FileAccessor;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Date;
 
@@ -72,6 +74,41 @@ public class Cohort {
         transactionId = 0;
     }
 
+    /**
+     * A method that would be executed by the thread
+     */
+    public void start() {
+
+        try {
+
+            // Establish a connection to the Coordinator
+            cohortSocket = new Socket(coordinatorHostName, coordinatorPort);
+            cohortDataInputStream = new DataInputStream(cohortSocket.getInputStream());
+            cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
+
+            // Register itself with the coordinator
+            cohortPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
+                    + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
+            cohortPrintStream.flush();
+
+            readInputStream = cohortDataInputStream.readLine();
+
+            stopConnection();
+
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void stopConnection(){
+        try {
+            cohortDataInputStream.close();
+            cohortPrintStream.close();
+            cohortSocket.close();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Getters and Setters to access the private variables
