@@ -6,6 +6,7 @@ import utility.SharedDataAmongCoordThreads;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ public class Coordinator {
      * coordinator
      */
     private int PORT = 9001;
+    private String readInputStream;
     private static int assignedProcessId;
     private static HashMap<Integer, Socket> connectionsToCoordinator;
 
@@ -73,6 +75,52 @@ public class Coordinator {
             coordinatorListenSocket = new ServerSocket(PORT);
 //        coordinatorListenSocket.setReuseAddress(true);  //https://blog.csdn.net/qq_34444097/article/details/78966654
 //        coordinatorListenSocket.setSoTimeout(1000 * 60 * 60);
+
+            System.out.println("Coordinator Process started at port: " + PORT);
+
+            // Store the information about coordinator itself in its arrays
+            processIdArray[assignedProcessId - 1] = assignedProcessId;
+            hostNameArray[assignedProcessId - 1] = InetAddress.getLocalHost().getHostName(); //TODO 這邊到時候要換成學校伺服器
+            portNoArray[assignedProcessId - 1] = PORT;
+
+            // Accept incoming connections from cohorts
+            while (true) {
+                //assignedProcessId++;
+                socket = coordinatorListenSocket.accept();
+                //connectionsToCoordinator.put(assignedProcessId, socket);
+
+                inputStream = new DataInputStream(socket.getInputStream());
+                readInputStream = inputStream.readLine();
+                // If received message is REGISTER
+                if (readInputStream.startsWith(StringConstants.MESSAGE_REGISTER)) {
+
+                    // Check if the id is already present in the array
+                    if (!searchTable(assignedProcessId)) {
+                        // Print the received request from the process
+                        System.out.println("Received: " + readInputStream);
+                    }
+
+                    /*
+                     * After insertion, create a new thread other computations
+                     * then the register would be handled
+                     */
+                    new CoordinatorServerHandler(socket, maxProcess, inputStream, assignedProcessId, data).start();
+
+                    /*
+                     * Once all cohorts register, engage the coordinator
+                     * computation
+                     */
+                    if (assignedProcessId == maxProcess) {
+//                        CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
+//                        c.start();
+//                        break;
+                    }
+
+                    assignedProcessId++;
+                }
+            }
+
+            /*
             socket = coordinatorListenSocket.accept();
             inputStream = new DataInputStream(socket.getInputStream());
             printWriter = new PrintWriter(socket.getOutputStream());
@@ -80,7 +128,7 @@ public class Coordinator {
             printWriter.flush();
 
             stopConnection();
-
+*/
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -100,6 +148,18 @@ public class Coordinator {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * A method to search whether the generated assigned Id is already present
+     * in the array
+     */
+    private boolean searchTable(int processId) {
+        for (int i = 0; i < maxProcess; i++) {
+            if (processIdArray[i] == processId)
+                return true;
+        }
+        return false;
     }
 
     /**

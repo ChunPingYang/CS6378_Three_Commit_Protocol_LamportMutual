@@ -17,7 +17,8 @@ public class Cohort {
     private int coordinatorPort = 9001;
 
     private Socket cohortSocket = null;
-    private DataInputStream cohortDataInputStream = null;
+    //private DataInputStream cohortDataInputStream = null;
+    private BufferedReader cohortDataInputStream = null;
     private PrintStream cohortPrintStream = null;
 
     /**
@@ -81,20 +82,33 @@ public class Cohort {
 
         try {
 
-            // Establish a connection to the Coordinator
-            cohortSocket = new Socket(coordinatorHostName, coordinatorPort);
-            cohortDataInputStream = new DataInputStream(cohortSocket.getInputStream());
-            cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
+            while(true) {
 
-            // Register itself with the coordinator
-            cohortPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
-                    + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
-            cohortPrintStream.flush();
+                // Establish a connection to the Coordinator
+                cohortSocket = new Socket(coordinatorHostName, coordinatorPort);
+                //cohortDataInputStream = new DataInputStream(cohortSocket.getInputStream());
+                cohortDataInputStream =
+                        new BufferedReader(
+                                new InputStreamReader(cohortSocket.getInputStream()));
+                cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
 
-            readInputStream = cohortDataInputStream.readLine();
+                // Register itself with the coordinator
+                cohortPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
+                        + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
+                cohortPrintStream.flush();
 
-            stopConnection();
+//                readInputStream = cohortDataInputStream.readLine();
+//                int value = 0;
+//                while ((value = cohortDataInputStream.read()) != 0) {
+                    //System.out.println("echo: " + cohortDataInputStream.readLine());
+//                }
+                String inLine = null;
+                while (((inLine = cohortDataInputStream.readLine()) != null) && (!(inLine.isEmpty()))) {
+                    System.out.println(inLine);
+                }
 
+                stopConnection();
+            }
         }catch(IOException e){
             e.printStackTrace();
         }
