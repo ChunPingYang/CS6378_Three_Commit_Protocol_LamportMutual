@@ -3,9 +3,13 @@ package listener;
 import model.StringConstants;
 import utility.FileAccessor;
 import utility.SharedDataAmongCoordThreads;
+
+import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Date;
 
 public class CoordinatorServerHandler extends Thread{
 
@@ -15,6 +19,7 @@ public class CoordinatorServerHandler extends Thread{
     private Socket cohortSocket = null;
     private PrintWriter printWriter = null;
     private DataInputStream dataInputStream = null;
+    private BufferedReader bufferReader = null;
 
     /**
      * Boolean variables required to not allow the coordinator to send the same
@@ -47,11 +52,11 @@ public class CoordinatorServerHandler extends Thread{
     /**
      * A parameterized constructor that initializes its local variables
      */
-    public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, DataInputStream inputStream, int pId,
+    public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
                                     SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
-        this.dataInputStream = inputStream;
+        this.bufferReader = bufferReader;
         this.processId = pId;
         this.sharedDataAmongCoordThreads = sharedDataAmongCoordThreads;
 
@@ -69,21 +74,87 @@ public class CoordinatorServerHandler extends Thread{
 
     @Override
     public void run() {
+
         while (true) {
 
             try {
                 printWriter = new PrintWriter(cohortSocket.getOutputStream());
-                //printWriter.println(processId + StringConstants.SPACE); //TODO 不懂為什麼要加空白
-                printWriter.println(processId + StringConstants.SPACE);
+                printWriter.println(processId + StringConstants.SPACE); //TODO 不懂為什麼要加空白
                 printWriter.flush();
 
-//                if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
-//
-//                }
+                //isCommitRequest: send commit_request
+                if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+                    isCommitRequest = true;
+                    printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST);
+                    printWriter.flush();
+
+                    System.out.println(
+                            "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
+
+                    String inLine = null;
+                    while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+                        System.out.println(inLine);
+
+                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                                .startsWith(StringConstants.MESSAGE_AGREED)) {
+
+                            sharedDataAmongCoordThreads.incrementAgree();
+                            System.out.println("Coordinator received AGREED from "
+                                    + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
+
+                            //TODO 要等待所有的伺服器數量
+                            if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
+                                    && !isCommitted) {
+
+
+                            }
+
+                        }
+
+                        // Received AGREED Message from all cohorts
+                        if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
+                                && !isPrepareSentToAllCohorts && !coordinatorFail) {
+
+                        }
+
+                        // Received ACK Message
+                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                                .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
+
+                        }
+
+                        // Received ACK Message from all
+                        if (sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort && !coordinatorFail) {
+
+                        }
+
+                        // Received ABORT Message
+                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                                .startsWith(StringConstants.MESSAGE_ABORT) && !isAborted && !coordinatorFail) {
+
+                        }
+
+                        if (sharedDataAmongCoordThreads.isAborted() && !coordinatorFail) {
+
+                        }
+                    }
+
+                    // After recovery, abort
+                    if ((sharedDataAmongCoordThreads.isAbortAfterRecovery() && !isAborted && !coordinatorFail)) {
+
+                    }
+                    // After recovery, commit
+                    if (sharedDataAmongCoordThreads.isCommitAfterRecovery() && !isCommitted && !coordinatorFail) {
+
+                    }
+                }
+
+                }catch(IOException e){
+                    e.printStackTrace();
+                }catch(Exception e) {
+                    e.printStackTrace();
+                }
         }
     }
 }

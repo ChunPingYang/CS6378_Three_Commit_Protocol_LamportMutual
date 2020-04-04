@@ -3,9 +3,7 @@ package listener;
 import model.StringConstants;
 import utility.SharedDataAmongCoordThreads;
 
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -24,10 +22,13 @@ public class Coordinator {
      */
     private int PORT = 9001;
     private String readInputStream;
+    private String inline;
     private static int assignedProcessId;
+    private int variable;
     private static HashMap<Integer, Socket> connectionsToCoordinator;
 
     private DataInputStream inputStream = null;
+    private BufferedReader bufferReader = null;
     private Socket socket = null;
     private ServerSocket coordinatorListenSocket = null;
 
@@ -89,31 +90,36 @@ public class Coordinator {
                 socket = coordinatorListenSocket.accept();
                 //connectionsToCoordinator.put(assignedProcessId, socket);
 
-                inputStream = new DataInputStream(socket.getInputStream());
-                readInputStream = inputStream.readLine();
+//                inputStream = new DataInputStream(socket.getInputStream()); //TODO 改成bufferReader
+//                readInputStream = inputStream.readLine();
+
+                bufferReader = new BufferedReader(
+                        new InputStreamReader(socket.getInputStream()));
+                inline = bufferReader.readLine();
+
                 // If received message is REGISTER
-                if (readInputStream.startsWith(StringConstants.MESSAGE_REGISTER)) {
+                if (inline.startsWith(StringConstants.MESSAGE_REGISTER)) {
 
                     // Check if the id is already present in the array
                     if (!searchTable(assignedProcessId)) {
                         // Print the received request from the process
-                        System.out.println("Received: " + readInputStream);
+                        System.out.println("Received: " + inline);
                     }
 
                     /*
                      * After insertion, create a new thread other computations
                      * then the register would be handled
                      */
-                    new CoordinatorServerHandler(socket, maxProcess, inputStream, assignedProcessId, data).start();
+                    new CoordinatorServerHandler(socket, maxProcess, bufferReader, assignedProcessId, data).start();
 
                     /*
                      * Once all cohorts register, engage the coordinator
                      * computation
                      */
-                    if (assignedProcessId == maxProcess) {
-//                        CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
-//                        c.start();
-//                        break;
+                    if (assignedProcessId == maxProcess) { //TODO 所有伺服器都連接上後
+                        CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
+                        c.start();
+                        break;
                     }
 
                     assignedProcessId++;

@@ -17,8 +17,7 @@ public class Cohort {
     private int coordinatorPort = 9001;
 
     private Socket cohortSocket = null;
-    //private DataInputStream cohortDataInputStream = null;
-    private BufferedReader cohortDataInputStream = null;
+    private BufferedReader cohortBufferedReader = null;
     private PrintStream cohortPrintStream = null;
 
     /**
@@ -82,12 +81,10 @@ public class Cohort {
 
         try {
 
-            while(true) {
-
                 // Establish a connection to the Coordinator
                 cohortSocket = new Socket(coordinatorHostName, coordinatorPort);
                 //cohortDataInputStream = new DataInputStream(cohortSocket.getInputStream());
-                cohortDataInputStream =
+                cohortBufferedReader =
                         new BufferedReader(
                                 new InputStreamReader(cohortSocket.getInputStream()));
                 cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
@@ -97,18 +94,72 @@ public class Cohort {
                         + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
                 cohortPrintStream.flush();
 
-//                readInputStream = cohortDataInputStream.readLine();
-//                int value = 0;
-//                while ((value = cohortDataInputStream.read()) != 0) {
-                    //System.out.println("echo: " + cohortDataInputStream.readLine());
-//                }
-                String inLine = null;
-                while (((inLine = cohortDataInputStream.readLine()) != null) && (!(inLine.isEmpty()))) {
-                    System.out.println(inLine);
-                }
+                System.out.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
+                    + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
 
-                stopConnection();
-            }
+
+                // Fetch the process id assigned by the Coordinator
+                readInputStream = cohortBufferedReader.readLine();
+                pId = Integer.parseInt(readInputStream.split(StringConstants.SPACE)[0]);
+                System.out.println("Process Id: " + pId);
+
+                while(true) {
+                    String inLine = null;
+                    inLine = cohortBufferedReader.readLine();
+
+                    if(!startComputation){
+
+                        startComputation = true;
+
+                        boolean hasCommunicationStarted = false;
+
+                        while (((inLine = cohortBufferedReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+                            System.out.println(inLine);
+
+                            hasCommunicationStarted = true;
+
+                            // COMMIT REQ received
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .startsWith(StringConstants.MESSAGE_COMMIT_REQUEST)) {
+
+                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
+
+                                cohortPrintStream.println(StringConstants.MESSAGE_AGREED);
+                                cohortPrintStream.flush();
+
+                                System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
+                                System.out.println("Transition between the states for Cohort is : q" + pId
+                                        + " --> w" + pId);
+                            }
+
+                            // Prepare Message received
+                            if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
+                                    && !sentAck){
+
+                            }
+
+                            // Commit Message received
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .equals(StringConstants.MESSAGE_COMMIT)) {
+
+                            }
+
+                            // Abort Message received
+                            if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
+                                    && !isAborted) {
+
+                            }
+
+                        }
+
+                    }
+
+
+                }
+                //stopConnection();
+
+
+
         }catch(IOException e){
             e.printStackTrace();
         }
@@ -116,7 +167,7 @@ public class Cohort {
 
     public void stopConnection(){
         try {
-            cohortDataInputStream.close();
+            cohortBufferedReader.close();
             cohortPrintStream.close();
             cohortSocket.close();
         }catch(IOException e){
