@@ -86,7 +86,7 @@ public class CoordinatorServerHandler extends Thread{
                 if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
                     isCommitRequest = true;
-                    printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST);
+                    printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE);
                     printWriter.flush();
 
                     System.out.println(
@@ -96,7 +96,7 @@ public class CoordinatorServerHandler extends Thread{
                     while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
                         System.out.println(inLine);
 
-                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                        if (inLine.split(StringConstants.SPACE)[0]
                                 .startsWith(StringConstants.MESSAGE_AGREED)) {
 
                             sharedDataAmongCoordThreads.incrementAgree();
@@ -115,22 +115,52 @@ public class CoordinatorServerHandler extends Thread{
                         // Received AGREED Message from all cohorts
                         if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
                                 && !isPrepareSentToAllCohorts && !coordinatorFail) {
+                            isPrepareSentToAllCohorts = true;
+                            System.out.println(
+                                    "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
+                            printWriter.println(StringConstants.MESSAGE_PREPARE + StringConstants.SPACE);
+                            printWriter.flush();
+
+                            System.out.println("Coordinator sent PREPARE to all Cohorts");
                         }
 
                         // Received ACK Message
-                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                        if (inLine.split(StringConstants.SPACE)[0]
                                 .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
+                            sharedDataAmongCoordThreads.incrementAck();
+                            System.out.println("Coordinator received ACK from "
+                                    + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
 
+                            //Wait for other cohorts to send ack
+                            while (sharedDataAmongCoordThreads.getCountAckFromCohort() != maxCohort) {
+                                Thread.sleep(1000);
+                            }
                         }
 
                         // Received ACK Message from all
                         if (sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort && !coordinatorFail) {
 
+                            if(sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort
+                                    && !isCommitted && !coordinatorFail){
+                                isCommitted = true;
+
+                                printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE);
+                                printWriter.flush();
+
+                                System.out.println("Coordinator sent COMMIT to all cohorts");
+
+                                System.out.println(
+                                        "Transition between the states for Coordinator is : p1 --> c1");
+
+                                System.out.println("...Coordinator Thread terminates...");
+                                System.out.println();
+                                break;
+                            }
                         }
 
                         // Received ABORT Message
-                        if (stringInputStream.split(StringConstants.SPACE)[0]
+                        if (inLine.split(StringConstants.SPACE)[0]
                                 .startsWith(StringConstants.MESSAGE_ABORT) && !isAborted && !coordinatorFail) {
 
                         }

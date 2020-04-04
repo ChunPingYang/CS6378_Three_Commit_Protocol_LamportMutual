@@ -90,9 +90,6 @@ public class Coordinator {
                 socket = coordinatorListenSocket.accept();
                 //connectionsToCoordinator.put(assignedProcessId, socket);
 
-//                inputStream = new DataInputStream(socket.getInputStream()); //TODO 改成bufferReader
-//                readInputStream = inputStream.readLine();
-
                 bufferReader = new BufferedReader(
                         new InputStreamReader(socket.getInputStream()));
                 inline = bufferReader.readLine();

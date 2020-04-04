@@ -124,7 +124,7 @@ public class Cohort {
 
                                 System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
 
-                                cohortPrintStream.println(StringConstants.MESSAGE_AGREED);
+                                cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE);
                                 cohortPrintStream.flush();
 
                                 System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
@@ -136,12 +136,27 @@ public class Cohort {
                             if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
                                     && !sentAck){
 
+                                System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
+
+                                cohortPrintStream.println(StringConstants.MESSAGE_ACK + StringConstants.SPACE);
+                                cohortPrintStream.flush();
+                                sentAck = true;
+
+                                System.out.println("Cohort " + pId + " sent ACK to the Coordinator");
                             }
 
                             // Commit Message received
                             if (inLine.split(StringConstants.SPACE)[0]
                                     .equals(StringConstants.MESSAGE_COMMIT)) {
 
+                                System.out.println("After COMMIT, transition between the states for Cohort is : p"
+                                                + pId + " --> c" + pId);
+
+                                System.out.println();
+                                System.out.println("...Cohort Terminates...");
+                                System.err.println();
+
+                                break;
                             }
 
                             // Abort Message received
