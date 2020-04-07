@@ -5,6 +5,7 @@ import utility.FileAccessor;
 
 import java.io.*;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
 
@@ -60,6 +61,13 @@ public class Cohort {
     private long duration;
 
     /**
+     * Servers configuration
+     */
+    private String[] serverAdd;
+    private int[] serverPort;
+    private int Id; //which server
+
+    /**
      * Default constructor to initialize the variables
      */
     public Cohort() {
@@ -74,38 +82,39 @@ public class Cohort {
         transactionId = 0;
     }
 
+    public void readServerConfig(String[] adds, int[] ports){
+        this.serverAdd = adds;
+        this.serverPort = ports;
+    }
+
     /**
      * A method that would be executed by the thread
      */
-    public void start() {
+    public void start(int id) {
 
         try {
 
+                int pId = id+1;
                 // Establish a connection to the Coordinator
-                cohortSocket = new Socket(coordinatorHostName, coordinatorPort);
-                //cohortDataInputStream = new DataInputStream(cohortSocket.getInputStream());
+                ServerSocket cohortListenSocket = new ServerSocket(serverPort[id]);
+                System.out.println(cohortListenSocket.getInetAddress().toString() + ", " + cohortListenSocket.getLocalPort());
+                cohortSocket = cohortListenSocket.accept();
+
                 cohortBufferedReader =
                         new BufferedReader(
                                 new InputStreamReader(cohortSocket.getInputStream()));
                 cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
 
-                // Register itself with the coordinator
-                cohortPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
-                        + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
-                cohortPrintStream.flush();
-
-                System.out.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE
-                    + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + PORT + StringConstants.SPACE);
-
-
-                // Fetch the process id assigned by the Coordinator
-                readInputStream = cohortBufferedReader.readLine();
-                pId = Integer.parseInt(readInputStream.split(StringConstants.SPACE)[0]);
-                System.out.println("Process Id: " + pId);
+                String inline = null;
+                inline = cohortBufferedReader.readLine();
+                if(inline.startsWith(StringConstants.MESSAGE_REGISTER)) {
+                    // Register itself with the coordinator
+                    cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE
+                            + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + serverPort[id] + StringConstants.SPACE + serverPort[id]);
+                    cohortPrintStream.flush();
+                }
 
                 while(true) {
-                    String inLine = null;
-                    inLine = cohortBufferedReader.readLine();
 
                     if(!startComputation){
 
@@ -113,18 +122,18 @@ public class Cohort {
 
                         boolean hasCommunicationStarted = false;
 
-                        while (((inLine = cohortBufferedReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-                            System.out.println(inLine);
+                        while (((inline = cohortBufferedReader.readLine()) != null) && (!(inline.isEmpty()))) {
+                            System.out.println(inline);
 
                             hasCommunicationStarted = true;
 
                             // COMMIT REQ received
-                            if (inLine.split(StringConstants.SPACE)[0]
+                            if (inline.split(StringConstants.SPACE)[0]
                                     .startsWith(StringConstants.MESSAGE_COMMIT_REQUEST)) {
 
                                 System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
 
-                                cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE);
+                                cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE+ serverPort[id]);
                                 cohortPrintStream.flush();
 
                                 System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
@@ -133,12 +142,12 @@ public class Cohort {
                             }
 
                             // Prepare Message received
-                            if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
+                            if (inline.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
                                     && !sentAck){
 
                                 System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
 
-                                cohortPrintStream.println(StringConstants.MESSAGE_ACK + StringConstants.SPACE);
+                                cohortPrintStream.println(StringConstants.MESSAGE_ACK + StringConstants.SPACE + serverPort[id]);
                                 cohortPrintStream.flush();
                                 sentAck = true;
 
@@ -146,7 +155,7 @@ public class Cohort {
                             }
 
                             // Commit Message received
-                            if (inLine.split(StringConstants.SPACE)[0]
+                            if (inline.split(StringConstants.SPACE)[0]
                                     .equals(StringConstants.MESSAGE_COMMIT)) {
 
                                 System.out.println("After COMMIT, transition between the states for Cohort is : p"
@@ -160,7 +169,7 @@ public class Cohort {
                             }
 
                             // Abort Message received
-                            if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
+                            if (inline.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
                                     && !isAborted) {
 
                             }

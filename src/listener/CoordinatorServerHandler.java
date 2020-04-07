@@ -11,7 +11,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Date;
 
-public class CoordinatorServerHandler extends Thread{
+public class CoordinatorServerHandler{
 
     /**
      * Variables required for establishing connections
@@ -72,119 +72,120 @@ public class CoordinatorServerHandler extends Thread{
     }
 
 
-    @Override
-    public void run() {
+    public void start() {
 
-        while (true) {
+        try {
 
-            try {
                 printWriter = new PrintWriter(cohortSocket.getOutputStream());
-                printWriter.println(processId + StringConstants.SPACE); //TODO 不懂為什麼要加空白
-                printWriter.flush();
 
-                //isCommitRequest: send commit_request
-                if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
+                while (true) {
 
-                    isCommitRequest = true;
-                    printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE);
-                    printWriter.flush();
+                    //isCommitRequest: send commit_request
+                    if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
-                    System.out.println(
-                            "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
+                        isCommitRequest = true;
+                        printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE + processId);
+                        printWriter.flush();
 
-                    String inLine = null;
-                    while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-                        System.out.println(inLine);
+                        System.out.println(
+                                "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
 
-                        if (inLine.split(StringConstants.SPACE)[0]
-                                .startsWith(StringConstants.MESSAGE_AGREED)) {
+                        String inLine = null;
+                        while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+                            System.out.println(inLine);
 
-                            sharedDataAmongCoordThreads.incrementAgree();
-                            System.out.println("Coordinator received AGREED from "
-                                    + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .startsWith(StringConstants.MESSAGE_AGREED)) {
 
-                            //TODO 要等待所有的伺服器數量
-                            if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
-                                    && !isCommitted) {
+                                sharedDataAmongCoordThreads.incrementAgree();
+                                System.out.println("Coordinator received AGREED from "
+                                        + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
 
+                                //TODO 要等待所有的伺服器數量
+                                if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
+                                        && !isCommitted) {
+
+                                    Thread.sleep(10000);
+                                }
 
                             }
 
-                        }
+                            // Received AGREED Message from all cohorts
+                            System.out.println("cohort#: "+sharedDataAmongCoordThreads.getCountAgreeFromCohort());
+                            System.out.println("isPrepareSentToAllCohorts: "+isPrepareSentToAllCohorts);
+                            if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
+                                    && !isPrepareSentToAllCohorts && !coordinatorFail) {
+                                isPrepareSentToAllCohorts = true;
+                                System.out.println(
+                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
-                        // Received AGREED Message from all cohorts
-                        if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
-                                && !isPrepareSentToAllCohorts && !coordinatorFail) {
-                            isPrepareSentToAllCohorts = true;
-                            System.out.println(
-                                    "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
-
-                            printWriter.println(StringConstants.MESSAGE_PREPARE + StringConstants.SPACE);
-                            printWriter.flush();
-
-                            System.out.println("Coordinator sent PREPARE to all Cohorts");
-                        }
-
-                        // Received ACK Message
-                        if (inLine.split(StringConstants.SPACE)[0]
-                                .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
-                            sharedDataAmongCoordThreads.incrementAck();
-                            System.out.println("Coordinator received ACK from "
-                                    + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
-
-                            //Wait for other cohorts to send ack
-                            while (sharedDataAmongCoordThreads.getCountAckFromCohort() != maxCohort) {
-                                Thread.sleep(1000);
-                            }
-                        }
-
-                        // Received ACK Message from all
-                        if (sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort && !coordinatorFail) {
-
-                            if(sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort
-                                    && !isCommitted && !coordinatorFail){
-                                isCommitted = true;
-
-                                printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE);
+                                printWriter.println(StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+ processId);
                                 printWriter.flush();
 
-                                System.out.println("Coordinator sent COMMIT to all cohorts");
+                                System.out.println("Coordinator sent PREPARE to all Cohorts");
+                            }
 
-                                System.out.println(
-                                        "Transition between the states for Coordinator is : p1 --> c1");
+                            // Received ACK Message
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
+                                sharedDataAmongCoordThreads.incrementAck();
+                                System.out.println("Coordinator received ACK from "
+                                        + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
 
-                                System.out.println("...Coordinator Thread terminates...");
-                                System.out.println();
-                                break;
+                                //Wait for other cohorts to send ack
+                                while (sharedDataAmongCoordThreads.getCountAckFromCohort() != maxCohort) {
+                                    Thread.sleep(1000);
+                                }
+                            }
+
+                            // Received ACK Message from all
+                            if (sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort && !coordinatorFail) {
+
+                                if (sharedDataAmongCoordThreads.getCountAckFromCohort() == maxCohort
+                                        && !isCommitted && !coordinatorFail) {
+                                    isCommitted = true;
+
+                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE+ processId);
+                                    printWriter.flush();
+
+                                    System.out.println("Coordinator sent COMMIT to all cohorts");
+
+                                    System.out.println(
+                                            "Transition between the states for Coordinator is : p1 --> c1");
+
+                                    System.out.println("...Coordinator Thread terminates...");
+                                    System.out.println();
+                                    break;
+                                }
+                            }
+
+                            // Received ABORT Message
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .startsWith(StringConstants.MESSAGE_ABORT) && !isAborted && !coordinatorFail) {
+
+                            }
+
+                            if (sharedDataAmongCoordThreads.isAborted() && !coordinatorFail) {
+
                             }
                         }
 
-                        // Received ABORT Message
-                        if (inLine.split(StringConstants.SPACE)[0]
-                                .startsWith(StringConstants.MESSAGE_ABORT) && !isAborted && !coordinatorFail) {
+                        // After recovery, abort
+                        if ((sharedDataAmongCoordThreads.isAbortAfterRecovery() && !isAborted && !coordinatorFail)) {
 
                         }
-
-                        if (sharedDataAmongCoordThreads.isAborted() && !coordinatorFail) {
+                        // After recovery, commit
+                        if (sharedDataAmongCoordThreads.isCommitAfterRecovery() && !isCommitted && !coordinatorFail) {
 
                         }
-                    }
-
-                    // After recovery, abort
-                    if ((sharedDataAmongCoordThreads.isAbortAfterRecovery() && !isAborted && !coordinatorFail)) {
-
-                    }
-                    // After recovery, commit
-                    if (sharedDataAmongCoordThreads.isCommitAfterRecovery() && !isCommitted && !coordinatorFail) {
-
                     }
                 }
 
-                }catch(IOException e){
-                    e.printStackTrace();
-                }catch(Exception e) {
-                    e.printStackTrace();
-                }
-        }
+            }catch(IOException e){
+                e.printStackTrace();
+            }catch(Exception e) {
+                e.printStackTrace();
+            }
+
     }
 }

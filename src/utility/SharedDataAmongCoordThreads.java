@@ -217,11 +217,11 @@ public class SharedDataAmongCoordThreads {
 		this.commitedValue = commitedValue;
 	}
 
-	public void incrementAgree() {
+	public synchronized void incrementAgree() {
 		countAgreeFromCohort++;
 	}
 
-	public int getCountAgreeFromCohort() {
+	public synchronized int getCountAgreeFromCohort() {
 		return countAgreeFromCohort;
 	}
 
