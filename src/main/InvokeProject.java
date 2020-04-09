@@ -4,6 +4,8 @@ import listener.Cohort;
 import listener.Coordinator;
 import utility.ReadConfigFile;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -16,9 +18,17 @@ public class InvokeProject {
 	private static ReadConfigFile extractFromConfigFile;
 	private static Coordinator coordinatorProcess;
 	private static Cohort otherProcess;
-	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1"};
-	private static int[] portsArr = new int[]{5000,5001,5002};
+	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1"};
+	private static int[] portsArr = new int[]{5000,5001,5002,5003,5004};
 
+	//TODO update/insert;read, 這邊mod要改成7
+	public static List<Integer> selectServer(int fileId){
+		List<Integer> list = new ArrayList<Integer>();
+		list.add(fileId%5);
+		list.add((fileId+1)%5);
+		list.add((fileId+2)%5);
+		return list;
+	}
 	/**
 	 * 
 	 */
@@ -29,7 +39,10 @@ public class InvokeProject {
 			coordinatorProcess = extractFromConfigFile.getConfigFileData(args[1]);
 			coordinatorProcess.readServerConfig(serverList,portsArr);
 
-			coordinatorProcess.start();
+			System.out.println("Enter file number:");
+			Scanner in = new Scanner(System.in);
+			int fileId = in.nextInt();
+			coordinatorProcess.start(fileId);
 		} else {
 			extractFromConfigFile = new ReadConfigFile(false);
 			otherProcess = new Cohort();
@@ -39,7 +52,7 @@ public class InvokeProject {
 			Scanner in = new Scanner(System.in);
 			int index = in.nextInt();
 
-			int[] ids = new int[]{0,1,2};
+			int[] ids = new int[]{0,1,2,3,4};
 			otherProcess.readServerConfig(serverList,portsArr);
 
 			otherProcess.start(ids[index]);

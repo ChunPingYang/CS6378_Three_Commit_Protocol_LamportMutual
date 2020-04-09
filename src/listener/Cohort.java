@@ -158,6 +158,10 @@ public class Cohort {
                             if (inline.split(StringConstants.SPACE)[0]
                                     .equals(StringConstants.MESSAGE_COMMIT)) {
 
+                                String fileId = inline.split(StringConstants.SPACE)[2];
+                                outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
+                                fileAccessor.writeToOutputFile1(outputFile,StringConstants.STATE_W + StringConstants.SPACE + pId + StringConstants.SPACE + fileId);
+
                                 System.out.println("After COMMIT, transition between the states for Cohort is : p"
                                                 + pId + " --> c" + pId);
 

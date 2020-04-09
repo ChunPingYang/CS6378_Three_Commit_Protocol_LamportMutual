@@ -4,12 +4,8 @@ import model.StringConstants;
 import utility.FileAccessor;
 import utility.SharedDataAmongCoordThreads;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
-import java.util.Date;
 
 public class CoordinatorServerHandler{
 
@@ -37,6 +33,7 @@ public class CoordinatorServerHandler{
     private String stringInputStream;
     private int maxCohort;
     private int processId;
+    private int fileId;
 
     /**
      * Variable to access shared data among different handler threads
@@ -50,14 +47,21 @@ public class CoordinatorServerHandler{
     private FileAccessor fileaccessor;
 
     /**
+     * Variables to access the log files for states of three phase protocol and
+     * output files
+     */
+    private File outputFile;
+
+    /**
      * A parameterized constructor that initializes its local variables
      */
     public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
-                                    SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
+                                    int fileId,SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
         this.bufferReader = bufferReader;
         this.processId = pId;
+        this.fileId = fileId;
         this.sharedDataAmongCoordThreads = sharedDataAmongCoordThreads;
 
         isAborted = false;
@@ -66,7 +70,7 @@ public class CoordinatorServerHandler{
         isPrepareSentToAllCohorts = false;
 
 //        stateLogFile = new File(System.getProperty("user.dir") + "/StateInfo_Coordinator");
-//        outputLogFile = new File(System.getProperty("user.dir") + "/Output_Coordinator");
+//        outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
 
         fileaccessor = new FileAccessor();
     }
@@ -145,7 +149,7 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE+ processId);
+                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId);
                                     printWriter.flush();
 
                                     System.out.println("Coordinator sent COMMIT to all cohorts");

@@ -27,7 +27,9 @@ public class ReadConfigFile {
 	}
 
 	public Coordinator getConfigFileData(String fileName) {
+
 		fileLocation = System.getProperty("user.dir") + "/src/" + fileName;
+
 		try {
 			readConfigFile = new BufferedReader(new FileReader(fileLocation));
 			try {

@@ -7,7 +7,9 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class Coordinator {
 
@@ -77,9 +79,11 @@ public class Coordinator {
      * A method that will accept incoming connections from various processes,
      * will store the information of all the processes and then will act as a
      * normal process once all the READY messages have been received
+     * fileId range from 1 to n
      */
-    public void start() {
+    public void start(int fileId) {
         initialzeArray();
+        int[] servers = selectServer(fileId);
 
         try {
 
@@ -91,17 +95,16 @@ public class Coordinator {
             portNoArray[assignedProcessId - 1] = PORT;
 
             // build connections from cohorts
-            for(int i=0;i<maxProcess;i++){
+            for(int i=0;i<servers.length;i++){
                 final int pidIndex = i;
-                final Coordinator that = this;
                 new Thread(new Runnable(){
 
                     @Override
                     public void run() {
                         try {
-                            System.out.println(serverAdd[pidIndex] + ", " + serverPort[pidIndex]);
-                            Socket socket = new Socket(serverAdd[pidIndex], serverPort[pidIndex]);
-                            int processId = pidIndex+1;
+                            System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
+                            Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
+                            int processId = servers[pidIndex]+1;
                             PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
                             coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
                             coordinatorPrintStream.flush();
@@ -120,17 +123,15 @@ public class Coordinator {
                                     System.out.println("Received: " + inline);
                                 }
 
-                                if (processId == maxProcess) { //TODO 所有伺服器都連接上後
+                                if (processId == servers.length) { //TODO 所有伺服器都連接上後
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
 //                                    c.start();
                                     //break;
                                     data.setCommitMade(true);
                                 }
 
-                                //that.incrementProcessId();
-                                //int pid = that.getProcessId();
-                                new CoordinatorServerHandler(socket, maxProcess, bufferReader, processId, data).start();
 
+                                new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, data).start();
                             }
 
 
@@ -195,6 +196,11 @@ public class Coordinator {
             hostNameArray = new String[maxProcess + 1];
             portNoArray = new int[maxProcess + 1];
         }
+    }
+
+    //TODO update/insert;read, 這邊mod要改成7
+    public int[] selectServer(int fileId){
+        return new int[]{fileId%5,(fileId+1)%5,(fileId+2)%5};
     }
 
     /**
