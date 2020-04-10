@@ -31,6 +31,11 @@ public class SharedDataAmongCoordThreads {
 	private boolean w1TimeOut = false;
 	private int countTimeOut = 0;
 
+	private boolean committed = false;
+	//private boolean[] serversCommitted = {false,false,false,false,false};
+	private int countCommitCompletedFromCohort = 0;
+	private volatile boolean serversCommitted = false;
+
 	public void incrementTimeOut() {
 		countTimeOut++;
 	}
@@ -225,13 +230,15 @@ public class SharedDataAmongCoordThreads {
 		return countAgreeFromCohort;
 	}
 
-	public void incrementAck() {
-		countAckFromCohort++;
-	}
+	public synchronized void initializeCountAgree(){ countAgreeFromCohort = 0; }
 
-	public int getCountAckFromCohort() {
+	public synchronized void incrementAck() { countAckFromCohort++; }
+
+	public synchronized int getCountAckFromCohort() {
 		return countAckFromCohort;
 	}
+
+	public synchronized void initializeCountAck(){ countAckFromCohort = 0; }
 
 	public boolean isCommitSent() {
 		return commitSent;
@@ -241,4 +248,33 @@ public class SharedDataAmongCoordThreads {
 		this.commitSent = commitSent;
 	}
 
+	public void setCommitted(boolean committed){
+		this.committed = committed;
+	}
+
+	public boolean isCommitted(){
+		return committed;
+	}
+
+//	public void setServerCommitted(int index,boolean committed){
+//		serversCommitted[index] = committed;
+//	}
+
+	public void setServersCommitted(boolean serversCommitted){this.serversCommitted = serversCommitted;}
+
+	public boolean isServersCommitted(){ return serversCommitted; }
+
+	public synchronized void incrementCommitCompletedFromCohort() {countCommitCompletedFromCohort++;}
+
+	public synchronized int getCountCommitCompletedFromCohort() {return countCommitCompletedFromCohort;}
+
+	public synchronized void initializeCountCommitCompleted(){countCommitCompletedFromCohort = 0;}
+
+	public synchronized void initializeSharedData(){
+		setServersCommitted(false);
+		setCommitMade(false);
+		initializeCountAck();
+		initializeCountAgree();
+		initializeCountCommitCompleted();
+	}
 }

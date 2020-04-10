@@ -15,6 +15,7 @@ public class StringConstants {
 	public static String MESSAGE_COMMIT = "COMMIT";
 	public static String MESSAGE_ABORT = "ABORT";
 	public static String MESSAGE_ACK = "ACK";
+	public static String MESSAGE_COMMIT_COMPLETE = "COMMIT_COMPLETE";
 
 	public static String STATE_Q1 = "Q1";  //init
 	public static String STATE_W1 = "W1"; //wait

@@ -2,11 +2,13 @@ package listener;
 
 import model.StringConstants;
 import utility.FileAccessor;
+import utility.SharedDataAmongCoordThreads;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Date;
 
 public class Cohort {
@@ -17,9 +19,9 @@ public class Cohort {
     private int PORT = 5005;
     private int coordinatorPort = 9001;
 
-    private Socket cohortSocket = null;
-    private BufferedReader cohortBufferedReader = null;
-    private PrintStream cohortPrintStream = null;
+    //private Socket cohortSocket = null;
+    //private BufferedReader cohortBufferedReader = null;
+    //private PrintStream cohortPrintStream = null;
 
     /**
      * Variables to store information from the Config file
@@ -33,6 +35,7 @@ public class Cohort {
     private int pId;
     private String readInputStream;
 
+    private boolean isCommitted;
     private boolean isAborted;
     private String choice;
     private boolean sentAck;
@@ -73,6 +76,7 @@ public class Cohort {
     public Cohort() {
         fileAccessor = new FileAccessor();
         isAborted = false;
+        isCommitted = false;
         sentAck = false;
         recoveryDone = false;
         startComputation = false;
@@ -98,12 +102,22 @@ public class Cohort {
                 // Establish a connection to the Coordinator
                 ServerSocket cohortListenSocket = new ServerSocket(serverPort[id]);
                 System.out.println(cohortListenSocket.getInetAddress().toString() + ", " + cohortListenSocket.getLocalPort());
-                cohortSocket = cohortListenSocket.accept();
 
-                cohortBufferedReader =
+            while(true) {
+                System.out.println(" ");
+System.out.println("waiting incoming client...");
+                System.out.println(" ");
+                Socket cohortSocket = cohortListenSocket.accept();
+
+                //initialize
+                this.sentAck = false;
+                this.isCommitted = false;
+                this.isAborted = false;
+
+                BufferedReader cohortBufferedReader =
                         new BufferedReader(
                                 new InputStreamReader(cohortSocket.getInputStream()));
-                cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
+                PrintStream cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
 
                 String inline = null;
                 inline = cohortBufferedReader.readLine();
@@ -114,11 +128,11 @@ public class Cohort {
                     cohortPrintStream.flush();
                 }
 
-                while(true) {
 
-                    if(!startComputation){
 
-                        startComputation = true;
+//                    if(!startComputation){
+//
+//                        startComputation = true;
 
                         boolean hasCommunicationStarted = false;
 
@@ -156,11 +170,21 @@ public class Cohort {
 
                             // Commit Message received
                             if (inline.split(StringConstants.SPACE)[0]
-                                    .equals(StringConstants.MESSAGE_COMMIT)) {
+                                    .equals(StringConstants.MESSAGE_COMMIT)
+                                        && !isCommitted) {
 
                                 String fileId = inline.split(StringConstants.SPACE)[2];
+                                String n_time = inline.split(StringConstants.SPACE)[3];
                                 outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
-                                fileAccessor.writeToOutputFile1(outputFile,StringConstants.STATE_W + StringConstants.SPACE + pId + StringConstants.SPACE + fileId);
+                                fileAccessor.writeToOutputFile1(outputFile,StringConstants.STATE_W + StringConstants.SPACE + pId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time);
+
+                                //used to validate all servers done commit
+//                                SharedDataAmongCoordThreads.setServerCommitted(id,true);
+//                                System.out.println("committed:id: "+id+" "+ Arrays.toString(SharedDataAmongCoordThreads.isServersCommitted()));
+                                isCommitted = true;
+
+                                cohortPrintStream.println(StringConstants.MESSAGE_COMMIT_COMPLETE + StringConstants.SPACE + serverPort[id]);
+                                cohortPrintStream.flush();
 
                                 System.out.println("After COMMIT, transition between the states for Cohort is : p"
                                                 + pId + " --> c" + pId);
@@ -182,8 +206,7 @@ public class Cohort {
 
                     }
 
-
-                }
+//                }
                 //stopConnection();
 
 
@@ -193,15 +216,15 @@ public class Cohort {
         }
     }
 
-    public void stopConnection(){
-        try {
-            cohortBufferedReader.close();
-            cohortPrintStream.close();
-            cohortSocket.close();
-        }catch(IOException e){
-            e.printStackTrace();
-        }
-    }
+//    public void stopConnection(){
+//        try {
+//            cohortBufferedReader.close();
+//            cohortPrintStream.close();
+//            cohortSocket.close();
+//        }catch(IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 
     /**
      * Getters and Setters to access the private variables

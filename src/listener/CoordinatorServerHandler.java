@@ -26,6 +26,7 @@ public class CoordinatorServerHandler{
     private boolean isCommitRequest;
     private boolean isPrepareSentToAllCohorts;
     private boolean coordinatorFail = false;
+    private boolean isCommitCompleted;
 
     /**
      * Variables required for computation
@@ -34,6 +35,7 @@ public class CoordinatorServerHandler{
     private int maxCohort;
     private int processId;
     private int fileId;
+    private int n_time;
 
     /**
      * Variable to access shared data among different handler threads
@@ -56,12 +58,13 @@ public class CoordinatorServerHandler{
      * A parameterized constructor that initializes its local variables
      */
     public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
-                                    int fileId,SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
+                                    int fileId,int n_time,SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
         this.bufferReader = bufferReader;
         this.processId = pId;
         this.fileId = fileId;
+        this.n_time = n_time;
         this.sharedDataAmongCoordThreads = sharedDataAmongCoordThreads;
 
         isAborted = false;
@@ -106,17 +109,14 @@ public class CoordinatorServerHandler{
                                         + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
 
                                 //TODO 要等待所有的伺服器數量
-                                if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
+                                while(sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
                                         && !isCommitted) {
-
-                                    Thread.sleep(10000);
+                                    Thread.sleep(1000);
                                 }
 
                             }
 
                             // Received AGREED Message from all cohorts
-                            System.out.println("cohort#: "+sharedDataAmongCoordThreads.getCountAgreeFromCohort());
-                            System.out.println("isPrepareSentToAllCohorts: "+isPrepareSentToAllCohorts);
                             if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
                                     && !isPrepareSentToAllCohorts && !coordinatorFail) {
                                 isPrepareSentToAllCohorts = true;
@@ -149,7 +149,7 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId);
+                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time);
                                     printWriter.flush();
 
                                     System.out.println("Coordinator sent COMMIT to all cohorts");
@@ -157,10 +157,33 @@ public class CoordinatorServerHandler{
                                     System.out.println(
                                             "Transition between the states for Coordinator is : p1 --> c1");
 
-                                    System.out.println("...Coordinator Thread terminates...");
-                                    System.out.println();
-                                    break;
+//                                    System.out.println("...Coordinator Thread terminates...");
+//                                    System.out.println();
+//                                    break;
                                 }
+
+                            }
+
+                            // Received COMMIT_COMPLETE Message
+                            if (inLine.split(StringConstants.SPACE)[0]
+                                    .startsWith(StringConstants.MESSAGE_COMMIT_COMPLETE) && !isCommitCompleted && !coordinatorFail) {
+
+                                sharedDataAmongCoordThreads.incrementCommitCompletedFromCohort();
+                                System.out.println("Coordinator received COMMIT_COMPLETE from "
+                                        + sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() + " Cohort(s)");
+
+                                //Wait for other cohorts to send commit_complete
+                                while (sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() != maxCohort) {
+                                    Thread.sleep(1000);
+                                }
+
+                                isCommitCompleted = true;
+                                sharedDataAmongCoordThreads.setServersCommitted(true);
+
+                                System.out.println("...Coordinator Thread terminates...");
+                                System.out.println();
+
+                                break;
                             }
 
                             // Received ABORT Message
@@ -183,6 +206,8 @@ public class CoordinatorServerHandler{
 
                         }
                     }
+
+                    if(isCommitCompleted){break;}
                 }
 
             }catch(IOException e){
@@ -192,4 +217,6 @@ public class CoordinatorServerHandler{
             }
 
     }
+
+
 }

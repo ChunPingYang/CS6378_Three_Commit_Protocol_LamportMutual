@@ -8,6 +8,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -82,7 +83,7 @@ public class Coordinator {
      * fileId range from 1 to n
      */
     public void start(int fileId) {
-        initialzeArray();
+        initializeArray();
         int[] servers = selectServer(fileId);
 
         try {
@@ -94,59 +95,84 @@ public class Coordinator {
             hostNameArray[assignedProcessId - 1] = InetAddress.getLocalHost().getHostName(); //TODO 這邊到時候要換成學校伺服器
             portNoArray[assignedProcessId - 1] = PORT;
 
-            // build connections from cohorts
-            for(int i=0;i<servers.length;i++){
-                final int pidIndex = i;
-                new Thread(new Runnable(){
+            int n_time = 0;
+            while(n_time++ <= 5) {
 
-                    @Override
-                    public void run() {
-                        try {
-                            System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
-                            Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
-                            int processId = servers[pidIndex]+1;
-                            PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-                            coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
-                            coordinatorPrintStream.flush();
+                data.initializeSharedData();
+
+                final int count = n_time;
+
+                // build connections from cohorts
+                for (int i = 0; i < servers.length; i++) {
+                    final int pidIndex = i;
+                    new Thread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            try {
+
+                                System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
+                                Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
+                                int processId = servers[pidIndex] + 1;
+                                PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
+                                coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+                                coordinatorPrintStream.flush();
 
 
-                            BufferedReader bufferReader = new BufferedReader(
-                                    new InputStreamReader(socket.getInputStream()));
-                            inline = bufferReader.readLine();
+                                BufferedReader bufferReader = new BufferedReader(
+                                        new InputStreamReader(socket.getInputStream()));
+                                inline = bufferReader.readLine();
 
-                            // If received message is AGREED[REGISTER]
-                            if (inline.startsWith(StringConstants.MESSAGE_AGREED)) {
+                                // If received message is AGREED[REGISTER]
+                                if (inline.startsWith(StringConstants.MESSAGE_AGREED)) {
 
-                                // Check if the id is already present in the array
-                                if (!searchTable(assignedProcessId)) {
-                                    // Print the received request from the process
-                                    System.out.println("Received: " + inline);
-                                }
+                                    // Check if the id is already present in the array
+                                    if (!searchTable(assignedProcessId)) {
+                                        // Print the received request from the process
+                                        System.out.println("Received: " + inline);
+                                    }
 
-                                if (processId == servers.length) { //TODO 所有伺服器都連接上後
+                                    if (pidIndex+1 == servers.length) { //TODO 所有伺服器都連接上後
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
 //                                    c.start();
-                                    //break;
-                                    data.setCommitMade(true);
+                                        //break;
+                                        data.setCommitMade(true);
+                                    }
+
+
+                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, count,data).start();
+                                    System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
 
-                                new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, data).start();
+                                //Close
+                                stopConnection(coordinatorPrintStream,bufferReader,socket);
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
                             }
 
 
-
-
-                        }catch(IOException e){
-                            e.printStackTrace();
                         }
 
+                    }).start();
 
+                }
+
+                //used to validate all servers done commit
+                boolean serversCommitStatus = false;
+                while(!serversCommitStatus) {
+                    serversCommitStatus = data.isServersCommitted();
+                    //System.out.println("serversCommitStatus: "+serversCommitStatus);
+
+                    if(serversCommitStatus){
+                        System.out.println("all servers commit........");
                     }
+                }
 
-                }).start();
+                System.out.println("........n_time: "+n_time);
 
-
+                //Thread.sleep(10000);
             }
 
             /*
@@ -158,20 +184,15 @@ public class Coordinator {
         }
     }
 
-    public void stopConnection(){
+    public void stopConnection(PrintStream coordinatorPrintStream,BufferedReader bufferReader,Socket socket){
         try {
-            inputStream.close();
-            printWriter.close();
+            coordinatorPrintStream.close();
+            bufferReader.close();
             socket.close();
         }catch(IOException e){
             e.printStackTrace();
-        }finally {
-            try {
-                coordinatorListenSocket.close();
-            }catch(IOException e){
-                e.printStackTrace();
-            }
         }
+
     }
 
     /**
@@ -190,7 +211,7 @@ public class Coordinator {
      * A method to initialize the arrays where in process id, host name and port
      * no of all the processes in the topology is stored
      */
-    private void initialzeArray() {
+    private void initializeArray() {
         if (maxProcess != 0) {
             processIdArray = new int[maxProcess + 1];
             hostNameArray = new String[maxProcess + 1];
