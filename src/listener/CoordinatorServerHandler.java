@@ -36,6 +36,7 @@ public class CoordinatorServerHandler{
     private int processId;
     private int fileId;
     private int n_time;
+    private int clientId;
 
     /**
      * Variable to access shared data among different handler threads
@@ -58,13 +59,14 @@ public class CoordinatorServerHandler{
      * A parameterized constructor that initializes its local variables
      */
     public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
-                                    int fileId,int n_time,SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
+                                    int fileId, int clientId, int n_time, SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
         this.bufferReader = bufferReader;
         this.processId = pId;
         this.fileId = fileId;
         this.n_time = n_time;
+        this.clientId = clientId;
         this.sharedDataAmongCoordThreads = sharedDataAmongCoordThreads;
 
         isAborted = false;
@@ -149,7 +151,7 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time);
+                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time + StringConstants.SPACE + clientId);
                                     printWriter.flush();
 
                                     System.out.println("Coordinator sent COMMIT to all cohorts");

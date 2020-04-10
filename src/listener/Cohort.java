@@ -100,14 +100,15 @@ public class Cohort {
 
                 int pId = id+1;
                 // Establish a connection to the Coordinator
-                ServerSocket cohortListenSocket = new ServerSocket(serverPort[id]);
-                System.out.println(cohortListenSocket.getInetAddress().toString() + ", " + cohortListenSocket.getLocalPort());
+                ServerSocket cohortListener = new ServerSocket(serverPort[id]);
+                System.out.println(cohortListener.getInetAddress().toString() + ", " + cohortListener.getLocalPort());
 
             while(true) {
                 System.out.println(" ");
 System.out.println("waiting incoming client...");
                 System.out.println(" ");
-                Socket cohortSocket = cohortListenSocket.accept();
+
+                Socket cohortSocket = cohortListener.accept();
 
                 //initialize
                 this.sentAck = false;
@@ -175,12 +176,10 @@ System.out.println("waiting incoming client...");
 
                                 String fileId = inline.split(StringConstants.SPACE)[2];
                                 String n_time = inline.split(StringConstants.SPACE)[3];
+                                String clientId = inline.split(StringConstants.SPACE)[4];
                                 outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
-                                fileAccessor.writeToOutputFile1(outputFile,StringConstants.STATE_W + StringConstants.SPACE + pId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time);
+                                fileAccessor.writeToOutputFile1(outputFile,"Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
 
-                                //used to validate all servers done commit
-//                                SharedDataAmongCoordThreads.setServerCommitted(id,true);
-//                                System.out.println("committed:id: "+id+" "+ Arrays.toString(SharedDataAmongCoordThreads.isServersCommitted()));
                                 isCommitted = true;
 
                                 cohortPrintStream.println(StringConstants.MESSAGE_COMMIT_COMPLETE + StringConstants.SPACE + serverPort[id]);

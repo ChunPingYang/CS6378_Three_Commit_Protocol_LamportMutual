@@ -39,10 +39,13 @@ public class InvokeProject {
 			coordinatorProcess = extractFromConfigFile.getConfigFileData(args[1]);
 			coordinatorProcess.readServerConfig(serverList,portsArr);
 
+			System.out.println("Enter Client number:");
+			Scanner clientIdInput = new Scanner(System.in);
+			int clientId = clientIdInput.nextInt();
 			System.out.println("Enter file number:");
-			Scanner in = new Scanner(System.in);
-			int fileId = in.nextInt();
-			coordinatorProcess.start(fileId);
+			Scanner fileIdInput = new Scanner(System.in);
+			int fileId = fileIdInput.nextInt();
+			coordinatorProcess.start(clientId,fileId);
 		} else {
 			extractFromConfigFile = new ReadConfigFile(false);
 			otherProcess = new Cohort();

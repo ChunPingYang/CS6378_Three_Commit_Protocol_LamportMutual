@@ -82,7 +82,7 @@ public class Coordinator {
      * normal process once all the READY messages have been received
      * fileId range from 1 to n
      */
-    public void start(int fileId) {
+    public void start(int clientId,int fileId) {
         initializeArray();
         int[] servers = selectServer(fileId);
 
@@ -96,7 +96,7 @@ public class Coordinator {
             portNoArray[assignedProcessId - 1] = PORT;
 
             int n_time = 0;
-            while(n_time++ <= 5) {
+            while(n_time++ <= 10) {
 
                 data.initializeSharedData();
 
@@ -140,7 +140,7 @@ public class Coordinator {
                                     }
 
 
-                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, count,data).start();
+                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, clientId, count, data).start();
                                     System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
@@ -172,7 +172,7 @@ public class Coordinator {
 
                 System.out.println("........n_time: "+n_time);
 
-                //Thread.sleep(10000);
+//                Thread.sleep(3000);
             }
 
             /*

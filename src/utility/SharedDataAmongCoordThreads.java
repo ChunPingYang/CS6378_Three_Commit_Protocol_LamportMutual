@@ -34,7 +34,7 @@ public class SharedDataAmongCoordThreads {
 	private boolean committed = false;
 	//private boolean[] serversCommitted = {false,false,false,false,false};
 	private int countCommitCompletedFromCohort = 0;
-	private volatile boolean serversCommitted = false;
+	private volatile boolean serversCommitted = false; //這邊要使用volatile，不使用的話會造成debug可以通過，run卻不可以
 
 	public void incrementTimeOut() {
 		countTimeOut++;
