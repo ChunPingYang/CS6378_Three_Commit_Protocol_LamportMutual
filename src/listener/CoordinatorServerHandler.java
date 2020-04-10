@@ -96,19 +96,19 @@ public class CoordinatorServerHandler{
                         printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE + processId);
                         printWriter.flush();
 
-                        System.out.println(
-                                "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
+//                        System.out.println(
+//                                "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
 
                         String inLine = null;
                         while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-                            System.out.println(inLine);
+//                            System.out.println(inLine);
 
                             if (inLine.split(StringConstants.SPACE)[0]
                                     .startsWith(StringConstants.MESSAGE_AGREED)) {
 
                                 sharedDataAmongCoordThreads.incrementAgree();
-                                System.out.println("Coordinator received AGREED from "
-                                        + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
+//                                System.out.println("Coordinator received AGREED from "
+//                                        + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
 
                                 //TODO 要等待所有的伺服器數量
                                 while(sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
@@ -122,21 +122,21 @@ public class CoordinatorServerHandler{
                             if (sharedDataAmongCoordThreads.getCountAgreeFromCohort() == maxCohort
                                     && !isPrepareSentToAllCohorts && !coordinatorFail) {
                                 isPrepareSentToAllCohorts = true;
-                                System.out.println(
-                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
+//                                System.out.println(
+//                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
                                 printWriter.println(StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+ processId);
                                 printWriter.flush();
 
-                                System.out.println("Coordinator sent PREPARE to all Cohorts");
+//                                System.out.println("Coordinator sent PREPARE to all Cohorts");
                             }
 
                             // Received ACK Message
                             if (inLine.split(StringConstants.SPACE)[0]
                                     .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
                                 sharedDataAmongCoordThreads.incrementAck();
-                                System.out.println("Coordinator received ACK from "
-                                        + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
+//                                System.out.println("Coordinator received ACK from "
+//                                        + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
 
                                 //Wait for other cohorts to send ack
                                 while (sharedDataAmongCoordThreads.getCountAckFromCohort() != maxCohort) {
@@ -154,10 +154,10 @@ public class CoordinatorServerHandler{
                                     printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time + StringConstants.SPACE + clientId);
                                     printWriter.flush();
 
-                                    System.out.println("Coordinator sent COMMIT to all cohorts");
-
-                                    System.out.println(
-                                            "Transition between the states for Coordinator is : p1 --> c1");
+//                                    System.out.println("Coordinator sent COMMIT to all cohorts");
+//
+//                                    System.out.println(
+//                                            "Transition between the states for Coordinator is : p1 --> c1");
 
 //                                    System.out.println("...Coordinator Thread terminates...");
 //                                    System.out.println();
@@ -171,8 +171,8 @@ public class CoordinatorServerHandler{
                                     .startsWith(StringConstants.MESSAGE_COMMIT_COMPLETE) && !isCommitCompleted && !coordinatorFail) {
 
                                 sharedDataAmongCoordThreads.incrementCommitCompletedFromCohort();
-                                System.out.println("Coordinator received COMMIT_COMPLETE from "
-                                        + sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() + " Cohort(s)");
+//                                System.out.println("Coordinator received COMMIT_COMPLETE from "
+//                                        + sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() + " Cohort(s)");
 
                                 //Wait for other cohorts to send commit_complete
                                 while (sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() != maxCohort) {
@@ -182,8 +182,8 @@ public class CoordinatorServerHandler{
                                 isCommitCompleted = true;
                                 sharedDataAmongCoordThreads.setServersCommitted(true);
 
-                                System.out.println("...Coordinator Thread terminates...");
-                                System.out.println();
+//                                System.out.println("...Coordinator Thread terminates...");
+//                                System.out.println();
 
                                 break;
                             }

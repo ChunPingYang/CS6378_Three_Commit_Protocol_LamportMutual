@@ -88,8 +88,6 @@ public class Coordinator {
 
         try {
 
-            System.out.println("Coordinator Process started at port: " + PORT);
-
             // Store the information about coordinator itself in its arrays0
             processIdArray[assignedProcessId - 1] = assignedProcessId;
             hostNameArray[assignedProcessId - 1] = InetAddress.getLocalHost().getHostName(); //TODO 這邊到時候要換成學校伺服器
@@ -111,7 +109,7 @@ public class Coordinator {
                         public void run() {
                             try {
 
-                                System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
+//                                System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                                 Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
                                 int processId = servers[pidIndex] + 1;
                                 PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
@@ -121,15 +119,15 @@ public class Coordinator {
 
                                 BufferedReader bufferReader = new BufferedReader(
                                         new InputStreamReader(socket.getInputStream()));
-                                inline = bufferReader.readLine();
 
+                                String inline = bufferReader.readLine();
                                 // If received message is AGREED[REGISTER]
                                 if (inline.startsWith(StringConstants.MESSAGE_AGREED)) {
 
                                     // Check if the id is already present in the array
                                     if (!searchTable(assignedProcessId)) {
                                         // Print the received request from the process
-                                        System.out.println("Received: " + inline);
+//                                        System.out.println("Received: " + inline);
                                     }
 
                                     if (pidIndex+1 == servers.length) { //TODO 所有伺服器都連接上後
@@ -141,7 +139,7 @@ public class Coordinator {
 
 
                                     new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, clientId, count, data).start();
-                                    System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
+//                                    System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
 
@@ -166,11 +164,11 @@ public class Coordinator {
                     //System.out.println("serversCommitStatus: "+serversCommitStatus);
 
                     if(serversCommitStatus){
-                        System.out.println("all servers commit........");
+//                        System.out.println("all servers commit........");
                     }
                 }
-
-                System.out.println("........n_time: "+n_time);
+//
+//                System.out.println("........n_time: "+n_time);
 
 //                Thread.sleep(3000);
             }
