@@ -82,7 +82,7 @@ public class Coordinator {
      * normal process once all the READY messages have been received
      * fileId range from 1 to n
      */
-    public void start(int clientId,int fileId) {
+    public void start(int clientId,int fileId, String action) {
         initializeArray();
         int[] servers = selectServer(fileId);
 
@@ -123,12 +123,6 @@ public class Coordinator {
                                 String inline = bufferReader.readLine();
                                 // If received message is AGREED[REGISTER]
                                 if (inline.startsWith(StringConstants.MESSAGE_AGREED)) {
-
-                                    // Check if the id is already present in the array
-                                    if (!searchTable(assignedProcessId)) {
-                                        // Print the received request from the process
-//                                        System.out.println("Received: " + inline);
-                                    }
 
                                     if (pidIndex+1 == servers.length) { //TODO 所有伺服器都連接上後
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);

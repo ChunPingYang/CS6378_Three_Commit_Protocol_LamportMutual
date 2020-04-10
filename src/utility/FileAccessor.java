@@ -34,7 +34,7 @@ public class FileAccessor {
 		}
 	}
 
-	public void writeToOutputFile1(File outputFile, String newOutput){
+	public synchronized void writeToOutputFile1(File outputFile, String newOutput){
 
 		try {
 			outputReader = new FileReader(outputFile);

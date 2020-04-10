@@ -45,7 +45,10 @@ public class InvokeProject {
 			System.out.println("Enter file number:");
 			Scanner fileIdInput = new Scanner(System.in);
 			int fileId = fileIdInput.nextInt();
-			coordinatorProcess.start(clientId,fileId);
+			System.out.println("Enter action:");
+			Scanner actionInput = new Scanner(System.in);
+			String action = actionInput.next();
+			coordinatorProcess.start(clientId,fileId,action);
 		} else {
 			extractFromConfigFile = new ReadConfigFile(false);
 			otherProcess = new Cohort();
