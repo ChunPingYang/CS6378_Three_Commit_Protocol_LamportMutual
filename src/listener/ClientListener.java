@@ -7,7 +7,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 
-class ClientThread extends Thread{
+class ClientThread implements Runnable{
 
     private Socket cohortSocket;
     private boolean isCommitted;

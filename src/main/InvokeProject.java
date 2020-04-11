@@ -57,9 +57,10 @@ public class InvokeProject {
 			System.out.println("Enter server number:");
 			Scanner in = new Scanner(System.in);
 			int index = in.nextInt();
-
 			int[] ids = new int[]{0,1,2,3,4};
 			otherProcess.readServerConfig(serverList,portsArr);
+			otherProcess.initServerToServer(ids,ids[index]);
+
 
 			otherProcess.start(ids[index]);
 		}

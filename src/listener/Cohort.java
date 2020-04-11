@@ -2,10 +2,7 @@ package listener;
 
 import utility.FileAccessor;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -22,6 +19,7 @@ public class Cohort {
     //private Socket cohortSocket = null;
     //private BufferedReader cohortBufferedReader = null;
     //private PrintStream cohortPrintStream = null;
+    private ServerSocket cohortListener = null;
 
     /**
      * Variables to store information from the Config file
@@ -68,7 +66,6 @@ public class Cohort {
      */
     private String[] serverAdd;
     private int[] serverPort;
-    private int Id; //which server
 
     /**
      * Default constructor to initialize the variables
@@ -91,21 +88,78 @@ public class Cohort {
         this.serverPort = ports;
     }
 
+    public void initServerToServer(int[] ids, int currentServerId){
+
+        try {
+            cohortListener = new ServerSocket(serverPort[currentServerId]);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        for(int i=0;i<ids.length;i++){
+            if(ids[i]==currentServerId) continue;
+            else{
+                final int other = i;
+
+                //Connect to other servers
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        boolean isConnected = false;
+                        while(!isConnected){
+                            try {
+                                // connect to other servers
+                                Socket socket = new Socket(serverAdd[other],serverPort[other]);
+                                //outcomingNeibs.put(ids[other],socket);
+                                //outcomingChannels.put(ids[other],new ObjectOutputStream(socket.getOutputStream()));
+                                isConnected = true;
+                                System.out.println("connect to "+other);
+                            } catch (IOException e) {
+                                try{
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ex) {
+                                    ex.printStackTrace();
+                                }
+                                System.out.println("waiting for other servers to start");
+                                isConnected = false;
+                            }
+                        }
+                    }
+                }).start();
+            }
+        }
+
+        for(int i=0;i<ids.length;i++){
+            try {
+                if (ids[i] != currentServerId) {
+                    Socket socket = cohortListener.accept();
+                    //incomingNeibs.put(ids[i], socket);
+                    //incomingChannels.put(ids[i],new ObjectInputStream(socket.getInputStream()));
+                    //neighbors.add(ids[i]);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("get Incoming neibors ready!");
+        System.out.println("server connections ready!");
+
+    }
+
     /**
      * A method that would be executed by the thread
      */
     public void start(int id) {
 
         try {
-            // Establish a connection to the Coordinator
-            ServerSocket cohortListener = new ServerSocket(serverPort[id]);
 
             FileAccessor fileAccessor = new FileAccessor();
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
                 System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[id]);
-                new ClientThread(cohortSocket,id,serverPort,fileAccessor).start();
+                new Thread((new ClientThread(cohortSocket,id,serverPort,fileAccessor))).start();
             }
 
         }catch(IOException e){
