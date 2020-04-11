@@ -111,4 +111,33 @@ public class FileAccessor {
 			e.printStackTrace();
 		}
 	}
+
+	public synchronized boolean readFileAndValidateExist(File outputFile) {
+		try {
+
+			outputReader = new FileReader(outputFile);
+			outputBufferedReader = new BufferedReader(outputReader);
+			List<String> previousEntries = new ArrayList<>();
+
+			while((string = outputBufferedReader.readLine()) != null){
+				StringBuilder stringB = new StringBuilder();
+				stringB.append(string);
+				previousEntries.add(stringB.toString());
+				System.out.println(stringB.toString());
+			}
+
+			if(previousEntries.size()==0){
+				return false;
+			}
+
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+		return true;
+	}
+
 }

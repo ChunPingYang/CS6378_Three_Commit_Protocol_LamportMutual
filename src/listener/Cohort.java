@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Date;
@@ -103,6 +104,7 @@ public class Cohort {
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
+                System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[id]);
                 new ClientThread(cohortSocket,id,serverPort,fileAccessor).start();
             }
 

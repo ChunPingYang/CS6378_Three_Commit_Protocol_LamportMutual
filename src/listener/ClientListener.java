@@ -42,9 +42,9 @@ class ClientThread extends Thread{
                             new InputStreamReader(cohortSocket.getInputStream()));
             PrintStream cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
 
-            String inline = null;
-            inline = cohortBufferedReader.readLine();
-            if(inline.startsWith(StringConstants.MESSAGE_REGISTER)) {
+            String inLine = null;
+            inLine = cohortBufferedReader.readLine();
+            if(inLine.startsWith(StringConstants.MESSAGE_REGISTER)) {
                 // Register itself with the coordinator
                 cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE
                         + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + serverPort[id] + StringConstants.SPACE + serverPort[id]);
@@ -52,11 +52,11 @@ class ClientThread extends Thread{
             }
 
 
-            while (((inline = cohortBufferedReader.readLine()) != null) && (!(inline.isEmpty()))) {
-//                              System.out.println(inline);
+            while (((inLine = cohortBufferedReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+//                              System.out.println(inLine);
 
                 // COMMIT REQ received
-                if (inline.split(StringConstants.SPACE)[0]
+                if (inLine.split(StringConstants.SPACE)[0]
                         .startsWith(StringConstants.MESSAGE_COMMIT_REQUEST)) {
 
 //                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
@@ -70,7 +70,7 @@ class ClientThread extends Thread{
                 }
 
                 // Prepare Message received
-                if (inline.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
+                if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
                         && !sentAck){
 
 //                                System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
@@ -83,13 +83,13 @@ class ClientThread extends Thread{
                 }
 
                 // Commit Message received
-                if (inline.split(StringConstants.SPACE)[0]
+                if (inLine.split(StringConstants.SPACE)[0]
                         .equals(StringConstants.MESSAGE_COMMIT)
                             && !isCommitted) {
 
-                    String fileId = inline.split(StringConstants.SPACE)[2];
-                    String n_time = inline.split(StringConstants.SPACE)[3];
-                    String clientId = inline.split(StringConstants.SPACE)[4];
+                    String fileId = inLine.split(StringConstants.SPACE)[2];
+                    String n_time = inLine.split(StringConstants.SPACE)[3];
+                    String clientId = inLine.split(StringConstants.SPACE)[4];
                     outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
                     fileAccessor.writeToOutputFile1(outputFile,"Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
 
@@ -108,8 +108,27 @@ class ClientThread extends Thread{
                     break;
                 }
 
+                // Operation Read Message received
+                if(inLine.split(StringConstants.SPACE)[0].equals(StringConstants.ACTION_READ))
+                {
+                    String fileId = inLine.split(StringConstants.SPACE)[1];
+                    outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
+                    if(outputFile.exists()) {
+                        boolean isExist = fileAccessor.readFileAndValidateExist(outputFile);
+                        if(!isExist){
+                            cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
+                            cohortPrintStream.flush();
+                        }
+                    }else{
+                        cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
+                        cohortPrintStream.flush();
+                    }
+
+                    break;
+                }
+
                 // Abort Message received
-                if (inline.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
+                if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
                         && !isAborted) {
 
                 }

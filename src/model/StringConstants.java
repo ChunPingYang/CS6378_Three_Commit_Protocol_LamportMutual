@@ -16,6 +16,7 @@ public class StringConstants {
 	public static String MESSAGE_ABORT = "ABORT";
 	public static String MESSAGE_ACK = "ACK";
 	public static String MESSAGE_COMMIT_COMPLETE = "COMMIT_COMPLETE";
+	public static String MESSAGE_FILE_NOT_EXIST = "FILE_NOT_EXIST";
 
 	public static String STATE_Q1 = "Q1";  //init
 	public static String STATE_W1 = "W1"; //wait
@@ -28,5 +29,8 @@ public class StringConstants {
 	public static String STATE_P = "P";
 	public static String STATE_A = "A";
 	public static String STATE_C = "C";
+
+	public static String ACTION_WRITE = "W";
+	public static String ACTION_READ = "R";
 
 }
