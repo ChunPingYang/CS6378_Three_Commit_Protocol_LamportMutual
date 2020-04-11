@@ -1,12 +1,14 @@
 package listener;
 
+import model.LamportClock;
+import model.Message;
 import utility.FileAccessor;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Date;
+import java.util.*;
 
 public class Cohort {
     /**
@@ -44,6 +46,8 @@ public class Cohort {
     private int lastvalue;
     private int transactionId;
     private String state;
+    private Map<String,LamportClock> clocks;
+    private Map<String, Request> requests;
 
     /** Variable to access file methods */
     private FileAccessor fileAccessor;
@@ -89,6 +93,22 @@ public class Cohort {
     }
 
     public void initServerToServer(int[] ids, int currentServerId){
+        //numNeighbors = ids.length-1;
+        //incomingNeibs = Collections.synchronizedMap(new HashMap<>());
+        //outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
+        //incomingChannels = Collections.synchronizedMap(new HashMap<>());
+        //outcomingChannels = Collections.synchronizedMap(new HashMap<>());
+        //neighbors = Collections.synchronizedSet(new HashSet<>());
+        clocks = Collections.synchronizedMap(new HashMap<>());
+        requests =  Collections.synchronizedMap(new HashMap<>());
+
+        //TODO file list hard code
+        String[] a = new String[]{"file1","file2","file3","file4"};
+        List<String> fileList = Arrays.asList(a);
+        for(String file:fileList){
+            clocks.put(file,new LamportClock());
+            requests.put(file,new Request());
+        }
 
         try {
             cohortListener = new ServerSocket(serverPort[currentServerId]);
@@ -194,5 +214,43 @@ public class Cohort {
 
     public void setCoordinatorHostName(String coordinatorHostName) {
         this.coordinatorHostName = coordinatorHostName;
+    }
+}
+
+class Request{
+
+    // once a request is sent, do not send request until the last request is done
+    private boolean sendRequest = false;
+    private List<Message> messageQueue;
+
+    public Request(){
+        messageQueue = Collections.synchronizedList(new ArrayList<Message>(){
+            public synchronized boolean add(Message message) {
+                boolean ret = super.add(message);
+                Collections.sort(messageQueue);
+                return ret;
+            }
+        });
+    }
+
+    public Message headMessage(){
+        return messageQueue.get(0);
+    }
+
+    public synchronized void makeRequest(Message request) throws IOException {
+        if(!messageQueue.isEmpty() || sendRequest) {
+            System.err.println("last request not finished");
+            return;
+        }
+        messageQueue.add(request);
+        sendRequest = true;
+    }
+
+    public synchronized void release() throws IOException {
+        Message top = messageQueue.remove(0);
+    }
+
+    public synchronized boolean isAvailable(){
+        return !sendRequest;
     }
 }
