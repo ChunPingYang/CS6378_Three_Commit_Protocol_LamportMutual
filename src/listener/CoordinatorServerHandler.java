@@ -6,6 +6,7 @@ import utility.SharedDataAmongCoordThreads;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class CoordinatorServerHandler{
 
@@ -101,7 +102,7 @@ public class CoordinatorServerHandler{
 
                         String inLine = null;
                         while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-//                            System.out.println(inLine);
+                            //System.out.println(inLine);
 
                             if (inLine.split(StringConstants.SPACE)[0]
                                     .startsWith(StringConstants.MESSAGE_AGREED)) {
@@ -212,6 +213,9 @@ public class CoordinatorServerHandler{
                     if(isCommitCompleted){break;}
                 }
 
+            }catch (SocketTimeoutException e){
+                System.out.println("Time out.....");
+                e.getMessage();
             }catch(IOException e){
                 e.printStackTrace();
             }catch(Exception e) {

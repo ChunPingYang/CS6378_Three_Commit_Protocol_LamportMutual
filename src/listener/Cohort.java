@@ -95,7 +95,7 @@ public class Cohort {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+/*
         for(int i=0;i<ids.length;i++){
             if(ids[i]==currentServerId) continue;
             else{
@@ -144,13 +144,13 @@ public class Cohort {
 
         System.out.println("get Incoming neibors ready!");
         System.out.println("server connections ready!");
-
+*/
     }
 
     /**
      * A method that would be executed by the thread
      */
-    public void start(int id) {
+    public void start(int currentServerId) {
 
         try {
 
@@ -158,13 +158,29 @@ public class Cohort {
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
-                System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[id]);
-                new Thread((new ClientThread(cohortSocket,id,serverPort,fileAccessor))).start();
+                System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[currentServerId]);
+                new Thread((new ClientListener(cohortListener,cohortSocket,currentServerId,serverPort,fileAccessor))).start();
             }
 
         }catch(IOException e){
+            System.out.println(" ");
+            System.out.println(e.getMessage());
+        }catch(Exception e){
             e.printStackTrace();
         }
+
+//        try{
+//            Thread.sleep(5000);
+//        } catch (InterruptedException ex) {
+//            ex.printStackTrace();
+//        }
+//
+//        try {
+//            cohortListener = new ServerSocket(serverPort[currentServerId]);
+//            start(currentServerId);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
 //    public void stopConnection(){
