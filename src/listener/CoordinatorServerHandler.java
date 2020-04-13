@@ -93,7 +93,7 @@ public class CoordinatorServerHandler{
                     if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
                         isCommitRequest = true;
-                        printWriter.println(StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE + processId);
+                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE + processId);
                         printWriter.flush();
 
 //                        System.out.println(
@@ -125,7 +125,7 @@ public class CoordinatorServerHandler{
 //                                System.out.println(
 //                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
-                                printWriter.println(StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+ processId);
+                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+ processId);
                                 printWriter.flush();
 
 //                                System.out.println("Coordinator sent PREPARE to all Cohorts");
@@ -151,7 +151,7 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time + StringConstants.SPACE + clientId);
+                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time + StringConstants.SPACE + clientId);
                                     printWriter.flush();
 
 //                                    System.out.println("Coordinator sent COMMIT to all cohorts");

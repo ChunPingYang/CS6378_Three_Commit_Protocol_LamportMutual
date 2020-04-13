@@ -100,7 +100,7 @@ public class Coordinator {
                 Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
                 PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
                 int processId = servers[pidIndex] + 1;
-                coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
                 coordinatorPrintStream.flush();
 
                 BufferedReader bufferReader = new BufferedReader(
@@ -193,7 +193,7 @@ public class Coordinator {
                                 Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
                                 int processId = servers[pidIndex] + 1;
                                 PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-                                coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
                                 coordinatorPrintStream.flush();
 
 

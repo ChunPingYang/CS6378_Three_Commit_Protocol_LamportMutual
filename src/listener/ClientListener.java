@@ -44,7 +44,8 @@ class ClientThread implements Runnable{
 
             String inLine = null;
             inLine = cohortBufferedReader.readLine();
-            if(inLine.startsWith(StringConstants.MESSAGE_REGISTER)) {
+            if(inLine.split(StringConstants.SPACE)[1]
+                        .startsWith(StringConstants.MESSAGE_REGISTER)) {
                 // Register itself with the coordinator
                 cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE
                         + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + serverPort[id] + StringConstants.SPACE + serverPort[id]);
@@ -56,7 +57,7 @@ class ClientThread implements Runnable{
 //                              System.out.println(inLine);
 
                 // COMMIT REQ received
-                if (inLine.split(StringConstants.SPACE)[0]
+                if (inLine.split(StringConstants.SPACE)[1]
                         .startsWith(StringConstants.MESSAGE_COMMIT_REQUEST)) {
 
 //                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
@@ -70,7 +71,7 @@ class ClientThread implements Runnable{
                 }
 
                 // Prepare Message received
-                if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_PREPARE)
+                if (inLine.split(StringConstants.SPACE)[1].equals(StringConstants.MESSAGE_PREPARE)
                         && !sentAck){
 
 //                                System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
@@ -83,13 +84,13 @@ class ClientThread implements Runnable{
                 }
 
                 // Commit Message received
-                if (inLine.split(StringConstants.SPACE)[0]
+                if (inLine.split(StringConstants.SPACE)[1]
                         .equals(StringConstants.MESSAGE_COMMIT)
                             && !isCommitted) {
 
-                    String fileId = inLine.split(StringConstants.SPACE)[2];
-                    String n_time = inLine.split(StringConstants.SPACE)[3];
-                    String clientId = inLine.split(StringConstants.SPACE)[4];
+                    String fileId = inLine.split(StringConstants.SPACE)[3];
+                    String n_time = inLine.split(StringConstants.SPACE)[4];
+                    String clientId = inLine.split(StringConstants.SPACE)[5];
                     outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
                     fileAccessor.writeToOutputFile1(outputFile,"Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
 
@@ -109,7 +110,7 @@ class ClientThread implements Runnable{
                 }
 
                 // Operation Read Message received
-                if(inLine.split(StringConstants.SPACE)[0].equals(StringConstants.ACTION_READ))
+                if(inLine.split(StringConstants.SPACE)[1].equals(StringConstants.ACTION_READ))
                 {
                     String fileId = inLine.split(StringConstants.SPACE)[1];
                     outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
@@ -128,7 +129,7 @@ class ClientThread implements Runnable{
                 }
 
                 // Abort Message received
-                if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_ABORT)
+                if (inLine.split(StringConstants.SPACE)[1].equals(StringConstants.MESSAGE_ABORT)
                         && !isAborted) {
 
                 }

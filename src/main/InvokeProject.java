@@ -33,7 +33,8 @@ public class InvokeProject {
 	 * 
 	 */
 	public static void main(String[] args) {
-		if (args[0].equals("-c")) {
+		if (args[0].equals("coordinator"))
+		{
 			extractFromConfigFile = new ReadConfigFile(true);
 			coordinatorProcess = new Coordinator();
 			coordinatorProcess = extractFromConfigFile.getConfigFileData(args[1]);
@@ -50,9 +51,10 @@ public class InvokeProject {
 			String action = actionInput.next();
 			coordinatorProcess.start(clientId,fileId,action);
 		} else {
+
 			extractFromConfigFile = new ReadConfigFile(false);
 			otherProcess = new Cohort();
-			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[0]);
+			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[1]);
 
 			System.out.println("Enter server number:");
 			Scanner in = new Scanner(System.in);

@@ -46,8 +46,15 @@ public class Cohort {
     private int lastvalue;
     private int transactionId;
     private String state;
+
     private Map<String,LamportClock> clocks;
     private Map<String, Request> requests;
+    private Map<Integer,Socket> incomingNeibs;
+    private Map<Integer,Socket> outcomingNeibs;
+    private Map<Integer,BufferedReader> incomingChannels;
+    private Map<Integer,PrintStream> outcomingChannels;
+    private Set<Integer> neighbors;
+    private static int numNeighbors;
 
     /** Variable to access file methods */
     private FileAccessor fileAccessor;
@@ -93,12 +100,12 @@ public class Cohort {
     }
 
     public void initServerToServer(int[] ids, int currentServerId){
-        //numNeighbors = ids.length-1;
-        //incomingNeibs = Collections.synchronizedMap(new HashMap<>());
-        //outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
-        //incomingChannels = Collections.synchronizedMap(new HashMap<>());
-        //outcomingChannels = Collections.synchronizedMap(new HashMap<>());
-        //neighbors = Collections.synchronizedSet(new HashSet<>());
+        numNeighbors = ids.length-1;
+        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
+        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
+        incomingChannels = Collections.synchronizedMap(new HashMap<>());
+        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
+        neighbors = Collections.synchronizedSet(new HashSet<>());
         clocks = Collections.synchronizedMap(new HashMap<>());
         requests =  Collections.synchronizedMap(new HashMap<>());
 
@@ -130,8 +137,8 @@ public class Cohort {
                             try {
                                 // connect to other servers
                                 Socket socket = new Socket(serverAdd[other],serverPort[other]);
-                                //outcomingNeibs.put(ids[other],socket);
-                                //outcomingChannels.put(ids[other],new ObjectOutputStream(socket.getOutputStream()));
+                                outcomingNeibs.put(ids[other],socket);
+                                outcomingChannels.put(ids[other],new PrintStream(socket.getOutputStream()));
                                 isConnected = true;
                                 System.out.println("connect to "+other);
                             } catch (IOException e) {
@@ -153,9 +160,9 @@ public class Cohort {
             try {
                 if (ids[i] != currentServerId) {
                     Socket socket = cohortListener.accept();
-                    //incomingNeibs.put(ids[i], socket);
-                    //incomingChannels.put(ids[i],new ObjectInputStream(socket.getInputStream()));
-                    //neighbors.add(ids[i]);
+                    incomingNeibs.put(ids[i], socket);
+                    incomingChannels.put(ids[i],new BufferedReader(new InputStreamReader(socket.getInputStream())));
+                    neighbors.add(ids[i]);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
