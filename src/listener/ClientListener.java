@@ -2,14 +2,19 @@ package listener;
 
 import model.StringConstants;
 import utility.FileAccessor;
+import utility.SharedDataAmongCohortCoordThreads;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 
-class ClientThread implements Runnable{
+public class ClientListener implements Runnable{
 
     private Socket cohortSocket;
+    private Cohort cohort;
+    private SharedDataAmongCohortCoordThreads data;
+
+    //Transition State
     private boolean isCommitted;
     private boolean isAborted;
     private boolean sentAck;
@@ -18,10 +23,11 @@ class ClientThread implements Runnable{
     private File outputFile;
 
     private int[] serverPort;
-    private int id;
-    private int pId;
+    private int id; // process id index
+    private int pId; // process id
 
-    public ClientThread(Socket cohortSocket,int id,int[] serverPort, FileAccessor fileAccessor){
+    public ClientListener(Cohort cohort, Socket cohortSocket, int id, int[] serverPort, FileAccessor fileAccessor, SharedDataAmongCohortCoordThreads data){
+        this.cohort = cohort;
         this.cohortSocket = cohortSocket;
         this.isAborted = false;
         this.isCommitted = false;
@@ -30,6 +36,7 @@ class ClientThread implements Runnable{
         this.serverPort = serverPort;
         this.id = id;
         this.pId = id+1;
+        this.data = data;
     }
 
     @Override
@@ -61,6 +68,16 @@ class ClientThread implements Runnable{
                         .startsWith(StringConstants.MESSAGE_COMMIT_REQUEST)) {
 
 //                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
+
+                    //Handle request to be synchronized
+                    cohort.request(inLine);
+                    String clientId = inLine.split(StringConstants.SPACE)[3];
+                    String fileId = inLine.split(StringConstants.SPACE)[4];
+                    while(!data.isAgree(clientId,fileId)){
+                        System.out.println("waiting server.....");
+                        Thread.sleep(500);
+                    }
+                    data.getAgreeMap().get(clientId).replace(fileId,false);
 
                     cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE+ serverPort[id]);
                     cohortPrintStream.flush();
@@ -136,7 +153,7 @@ class ClientThread implements Runnable{
 
             }
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }

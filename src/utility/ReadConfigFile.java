@@ -77,8 +77,13 @@ public class ReadConfigFile {
 						}
 
 						if (inputLine[0].equals("NUMBER")) {
-							otherProcess.setMaxProcess(Integer.parseInt(inputLine[inputLine.length - 1]));
+							if(inputLine[2].equals("COHORT")){
+								otherProcess.setMaxProcess(Integer.parseInt(inputLine[inputLine.length - 1]));
+							}else if(inputLine[2].equals("COORDINATOR")){
+								otherProcess.setMaxCoordinator(Integer.parseInt(inputLine[inputLine.length - 1]));
+							}
 						}
+
 					}
 				}
 			} catch (IOException e) {

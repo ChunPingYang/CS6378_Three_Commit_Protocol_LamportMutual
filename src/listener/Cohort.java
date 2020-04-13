@@ -1,14 +1,18 @@
 package listener;
 
 import model.LamportClock;
+import model.LamportMutex;
 import model.Message;
+import model.StringConstants;
 import utility.FileAccessor;
+import utility.SharedDataAmongCohortCoordThreads;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.util.List;
 
 public class Cohort {
     /**
@@ -28,6 +32,7 @@ public class Cohort {
      */
     private int maxCohort;
     private String coordinatorHostName;
+    private int maxCoordinator;
 
     /**
      * Variables required for computation
@@ -46,13 +51,14 @@ public class Cohort {
     private int lastvalue;
     private int transactionId;
     private String state;
+    private SharedDataAmongCohortCoordThreads data;
 
     private Map<String,LamportClock> clocks;
-    private Map<String, Request> requests;
+    private Map<String, LamportMutex> mutexes;
     private Map<Integer,Socket> incomingNeibs;
     private Map<Integer,Socket> outcomingNeibs;
-    private Map<Integer,BufferedReader> incomingChannels;
-    private Map<Integer,PrintStream> outcomingChannels;
+    private Map<Integer,ObjectInputStream> incomingChannels;
+    private Map<Integer,ObjectOutputStream> outcomingChannels;
     private Set<Integer> neighbors;
     private static int numNeighbors;
 
@@ -78,10 +84,23 @@ public class Cohort {
     private String[] serverAdd;
     private int[] serverPort;
 
+    public synchronized Map<String, LamportClock> getClocks() {
+        return clocks;
+    }
+
+    public synchronized int getId() {
+        return pId;
+    }
+
+    public void readServerConfig(String[] adds, int[] ports){
+        this.serverAdd = adds;
+        this.serverPort = ports;
+    }
+
     /**
-     * Default constructor to initialize the variables
+     * Default initialize the variables
      */
-    public Cohort() {
+    public void initCohort(int id){
         fileAccessor = new FileAccessor();
         isAborted = false;
         isCommitted = false;
@@ -92,14 +111,13 @@ public class Cohort {
 
         lastvalue = 0;
         transactionId = 0;
+
+        pId = id;
+
+        data = new SharedDataAmongCohortCoordThreads(maxCoordinator);
     }
 
-    public void readServerConfig(String[] adds, int[] ports){
-        this.serverAdd = adds;
-        this.serverPort = ports;
-    }
-
-    public void initServerToServer(int[] ids, int currentServerId){
+    public void initServerToServer(int[] ids, int id){
         numNeighbors = ids.length-1;
         incomingNeibs = Collections.synchronizedMap(new HashMap<>());
         outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
@@ -107,24 +125,24 @@ public class Cohort {
         outcomingChannels = Collections.synchronizedMap(new HashMap<>());
         neighbors = Collections.synchronizedSet(new HashSet<>());
         clocks = Collections.synchronizedMap(new HashMap<>());
-        requests =  Collections.synchronizedMap(new HashMap<>());
+        mutexes =  Collections.synchronizedMap(new HashMap<>());
 
         //TODO file list hard code
-        String[] a = new String[]{"file1","file2","file3","file4"};
+        String[] a = new String[]{"1","2","3","4"};
         List<String> fileList = Arrays.asList(a);
-        for(String file:fileList){
-            clocks.put(file,new LamportClock());
-            requests.put(file,new Request());
+        for(String fileId:fileList){
+            clocks.put(fileId,new LamportClock());
+            mutexes.put(fileId,new LamportMutex(this));
         }
 
         try {
-            cohortListener = new ServerSocket(serverPort[currentServerId]);
+            cohortListener = new ServerSocket(serverPort[id]);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         for(int i=0;i<ids.length;i++){
-            if(ids[i]==currentServerId) continue;
+            if(ids[i]==id) continue;
             else{
                 final int other = i;
 
@@ -138,7 +156,7 @@ public class Cohort {
                                 // connect to other servers
                                 Socket socket = new Socket(serverAdd[other],serverPort[other]);
                                 outcomingNeibs.put(ids[other],socket);
-                                outcomingChannels.put(ids[other],new PrintStream(socket.getOutputStream()));
+                                outcomingChannels.put(ids[other],new ObjectOutputStream(socket.getOutputStream()));
                                 isConnected = true;
                                 System.out.println("connect to "+other);
                             } catch (IOException e) {
@@ -158,15 +176,21 @@ public class Cohort {
 
         for(int i=0;i<ids.length;i++){
             try {
-                if (ids[i] != currentServerId) {
+                if (ids[i] != id) {
                     Socket socket = cohortListener.accept();
                     incomingNeibs.put(ids[i], socket);
-                    incomingChannels.put(ids[i],new BufferedReader(new InputStreamReader(socket.getInputStream())));
+                    incomingChannels.put(ids[i],new ObjectInputStream(socket.getInputStream()));
                     neighbors.add(ids[i]);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+
+        //start serverListener, lister to neibors's message(Lamport Message)
+        for(int i=0;i<ids.length;i++){
+            if(ids[i]!=pId)
+                new Thread(new ServerListenner(this,incomingChannels.get(ids[i]))).start();
         }
 
         System.out.println("get Incoming neibors ready!");
@@ -186,7 +210,7 @@ public class Cohort {
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
                 System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[id]);
-                new Thread((new ClientThread(cohortSocket,id,serverPort,fileAccessor))).start();
+                new Thread((new ClientListener(this,cohortSocket,id,serverPort,fileAccessor,data))).start();
             }
 
         }catch(IOException e){
@@ -203,6 +227,103 @@ public class Cohort {
 //            e.printStackTrace();
 //        }
 //    }
+
+    // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
+    // if it is empty, do request and broadcast
+    public synchronized void request(String inLine) throws InterruptedException, IOException {
+        System.err.println(inLine);
+        String processId = inLine.split(StringConstants.SPACE)[2];
+        String clientId = inLine.split(StringConstants.SPACE)[3];
+        String fileId = inLine.split(StringConstants.SPACE)[4];
+        String seqNum = inLine.split(StringConstants.SPACE)[5];
+        String othersCohorts = inLine.split(StringConstants.SPACE)[6];
+
+        LamportClock clock = clocks.get(fileId);
+        clock.increment();
+        LamportMutex mutex = mutexes.get(fileId);
+        while(!mutex.isAvailable()){
+            System.err.println("Last request not finished......");
+            Thread.sleep(1000);
+        }
+
+        HashSet<Integer> otherServers = new HashSet<>();
+        otherServers.add(Integer.parseInt(othersCohorts.split(":")[0]));
+        otherServers.add(Integer.parseInt(othersCohorts.split(":")[1]));
+
+        Message request = new Message(clock.getClock(),
+                                        processId,
+                                        processId,
+                                        StringConstants.LAMPORT_REQUEST,
+                                        clientId,
+                                        fileId,
+                                        seqNum,
+                                        StringConstants.ROLE_COORDINATOR,
+                                        otherServers);
+        mutex.makeRequest(request);
+    }
+
+    // broadcast for request
+    // for request, it may wait for a time to be broadcast(last operation not finished), so the clock time should be the time of message
+    // but not the current clock
+    public synchronized void broadcast(Message message) throws IOException {
+        HashSet<Integer> otherServers = message.getNeighbors();
+        for(int neib:neighbors){
+            if(otherServers.contains(neib))
+            {
+                Message toSend = new Message(message.getClock(),
+                                                String.valueOf(this.getId()),
+                                                String.valueOf(neib),
+                                                message.getType(),
+                                                message.getClientId(),
+                                                message.getFileId(),
+                                                message.getSeqNum(),
+                                                StringConstants.ROLE_COHORT,
+                                                otherServers);
+
+                outcomingChannels.get(neib).writeObject(toSend);
+                outcomingChannels.get(neib).flush();
+            }
+        }
+    }
+
+    // wrapper method for different types of message
+    // server process messages according to its type
+    public synchronized void processMessage(Message received) throws IOException,InterruptedException {
+        String fileId = received.getFileId();
+        LamportClock clock = this.clocks.get(fileId);
+        clock.msgEvent(received);
+        String type = received.getType();
+        LamportMutex mutex = mutexes.get(fileId);
+
+        switch (type) {
+            case StringConstants.LAMPORT_REQUEST:
+                Message reply = mutex.getRequest(received);
+                sendReply(reply);
+                break;
+            case StringConstants.LAMPORT_REPLY:
+                mutex.getReply(received,data);
+                break;
+            default:
+                System.err.println("not correct type!");
+                break;
+        }
+
+
+        // after receive reply message, server might go to critical section
+        if(mutex.canEnterCriticalSection()){
+            mutex.release(received,data); //release resource, move to the next request
+        }
+    }
+
+    public synchronized void sendReply(Message reply){
+        int outNeib = Integer.parseInt(reply.getTo());
+        try {
+            outcomingChannels.get(outNeib).writeObject(reply);
+            outcomingChannels.get(outNeib).flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Getters and Setters to access the private variables
@@ -222,42 +343,8 @@ public class Cohort {
     public void setCoordinatorHostName(String coordinatorHostName) {
         this.coordinatorHostName = coordinatorHostName;
     }
-}
 
-class Request{
-
-    // once a request is sent, do not send request until the last request is done
-    private boolean sendRequest = false;
-    private List<Message> messageQueue;
-
-    public Request(){
-        messageQueue = Collections.synchronizedList(new ArrayList<Message>(){
-            public synchronized boolean add(Message message) {
-                boolean ret = super.add(message);
-                Collections.sort(messageQueue);
-                return ret;
-            }
-        });
-    }
-
-    public Message headMessage(){
-        return messageQueue.get(0);
-    }
-
-    public synchronized void makeRequest(Message request) throws IOException {
-        if(!messageQueue.isEmpty() || sendRequest) {
-            System.err.println("last request not finished");
-            return;
-        }
-        messageQueue.add(request);
-        sendRequest = true;
-    }
-
-    public synchronized void release() throws IOException {
-        Message top = messageQueue.remove(0);
-    }
-
-    public synchronized boolean isAvailable(){
-        return !sendRequest;
+    public void setMaxCoordinator(int maxCoordinator){
+        this.maxCoordinator = maxCoordinator;
     }
 }

@@ -100,7 +100,9 @@ public class Coordinator {
                 Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
                 PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
                 int processId = servers[pidIndex] + 1;
-                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
+                                                processId);
                 coordinatorPrintStream.flush();
 
                 BufferedReader bufferReader = new BufferedReader(
@@ -191,9 +193,12 @@ public class Coordinator {
 
 //                              System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                                 Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
-                                int processId = servers[pidIndex] + 1;
+                                //int processId = servers[pidIndex] + 1;
+                                int processId = servers[pidIndex];
                                 PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+                                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
+                                                                processId);
                                 coordinatorPrintStream.flush();
 
 
@@ -211,8 +216,17 @@ public class Coordinator {
                                         data.setCommitMade(true);
                                     }
 
+                                    //the servers sent from current one
+                                    int[] otherServers = new int[2];
+                                    int index = 0;
+                                    for(int i=0;i<servers.length;i++){
+                                        if(i!=pidIndex){
+                                            otherServers[index]=servers[i];
+                                            index++;
+                                        }
+                                    }
 
-                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, clientId, count, data).start();
+                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, clientId, count, otherServers,data).start();
 //                                  System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
@@ -242,7 +256,7 @@ public class Coordinator {
                     }
                 }
 
-//                Thread.sleep(3000);
+                Thread.sleep(5000);
             }
 
             /*

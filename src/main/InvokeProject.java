@@ -50,19 +50,19 @@ public class InvokeProject {
 			Scanner actionInput = new Scanner(System.in);
 			String action = actionInput.next();
 			coordinatorProcess.start(clientId,fileId,action);
-		} else {
 
+		} else {
 			extractFromConfigFile = new ReadConfigFile(false);
-			otherProcess = new Cohort();
-			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[1]);
 
 			System.out.println("Enter server number:");
 			Scanner in = new Scanner(System.in);
 			int index = in.nextInt();
 			int[] ids = new int[]{0,1,2,3,4};
+			otherProcess = new Cohort();
+			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[1]);
 			otherProcess.readServerConfig(serverList,portsArr);
+			otherProcess.initCohort(ids[index]);
 			otherProcess.initServerToServer(ids,ids[index]);
-
 
 			otherProcess.start(ids[index]);
 		}

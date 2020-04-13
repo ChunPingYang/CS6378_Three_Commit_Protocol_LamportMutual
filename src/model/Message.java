@@ -1,20 +1,23 @@
 package model;
 
 import java.io.Serializable;
+import java.util.HashSet;
 
 public class Message implements Serializable,Comparable<Message> {
 
     enum MessageType{
-        REQUEST, REPLY, RELEASE
+        REQUEST, REPLY
     };
     private final int clock;
-//    private  final int from;
-//    private final int to;
-//    private final String type ;
-//    private String content = "";
-//    private final String fileName;
-
-    private final int clientId;
+    private final String from;
+    private final String to;
+    private final String type;
+    private final String fileId;
+    private final String seqNum;
+    //private final String otherServers;
+    private final String clientId;
+    private final String role;
+    private HashSet<Integer> neighbors;
 
 //    public Message(int clock, int from , int to, String type, String fileName, String content){
 //        this.clock = clock;
@@ -25,37 +28,43 @@ public class Message implements Serializable,Comparable<Message> {
 //        this.content = content;
 //    }
 
-    public Message(int clock, int clientId){
+    public Message(int clock, String from, String to, String type, String clientId, String fileId, String seqNum, String role,HashSet<Integer> neighbors){
         this.clock = clock;
         this.clientId = clientId;
+        this.from = from;
+        this.to = to;
+        this.type = type;
+        this.fileId = fileId;
+        this.seqNum = seqNum;
+        this.role = role;
+        this.neighbors = new HashSet<>(neighbors);
     }
 
     public int getClock(){
         return this.clock;
     }
-//    public int getFrom() {
-//        return this.from;
-//    }
-//    public int getTo() {
-//        return this.to;
-//    }
-//    public String getType() {
-//        return this.type;
-//    }
-//
-//    public String getContent() {
-//        return content;
-//    }
-//
-//    public String getFileName() {
-//        return fileName;
-//    }
-//
-//    public void setContent(String content) {
-//        this.content = content;
-//    }
 
-    public int getClientId() { return this.clientId;}
+    public String getFrom() { return this.from; }
+
+    public String getTo() { return this.to; }
+
+    public String getType() { return this.type; }
+
+    public String getClientId() { return this.clientId;}
+
+    public String getFileId() { return fileId; }
+
+    public String getSeqNum() { return seqNum; }
+
+    public String getRole() { return role; }
+
+    public HashSet<Integer> getNeighbors() {
+        return neighbors;
+    }
+
+    public void setNeighbors(HashSet<Integer> neighbors) {
+        this.neighbors = neighbors;
+    }
 
     @Override
     public int compareTo(Message o) {
@@ -66,7 +75,7 @@ public class Message implements Serializable,Comparable<Message> {
             return 1;
         }
         else{
-            return this.clientId - o.getClientId();
+            return Integer.parseInt(this.getClientId()) - Integer.parseInt(o.getClientId());
         }
     }
 //    @Override

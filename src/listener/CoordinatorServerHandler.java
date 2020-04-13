@@ -37,6 +37,7 @@ public class CoordinatorServerHandler{
     private int fileId;
     private int n_time;
     private int clientId;
+    private int[] otherServers;
 
     /**
      * Variable to access shared data among different handler threads
@@ -59,7 +60,7 @@ public class CoordinatorServerHandler{
      * A parameterized constructor that initializes its local variables
      */
     public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
-                                    int fileId, int clientId, int n_time, SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
+                                    int fileId, int clientId, int n_time, int[] otherServers, SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
         this.bufferReader = bufferReader;
@@ -67,6 +68,7 @@ public class CoordinatorServerHandler{
         this.fileId = fileId;
         this.n_time = n_time;
         this.clientId = clientId;
+        this.otherServers = otherServers;
         this.sharedDataAmongCoordThreads = sharedDataAmongCoordThreads;
 
         isAborted = false;
@@ -93,7 +95,13 @@ public class CoordinatorServerHandler{
                     if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
                         isCommitRequest = true;
-                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE + processId);
+                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+                                            StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE +
+                                            processId + StringConstants.SPACE +
+                                            clientId + StringConstants.SPACE +
+                                            fileId + StringConstants.SPACE +
+                                            n_time + StringConstants.SPACE +
+                                            otherServers[0]+":"+otherServers[1]);
                         printWriter.flush();
 
 //                        System.out.println(
@@ -125,7 +133,9 @@ public class CoordinatorServerHandler{
 //                                System.out.println(
 //                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
-                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+ processId);
+                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+                                                    StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+
+                                                    processId);
                                 printWriter.flush();
 
 //                                System.out.println("Coordinator sent PREPARE to all Cohorts");
@@ -151,7 +161,11 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE + StringConstants.MESSAGE_COMMIT + StringConstants.SPACE + processId + StringConstants.SPACE + fileId + StringConstants.SPACE + n_time + StringConstants.SPACE + clientId);
+                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+                                                        StringConstants.MESSAGE_COMMIT + StringConstants.SPACE +
+                                                        processId + StringConstants.SPACE +
+                                                        fileId + StringConstants.SPACE +
+                                                        n_time + StringConstants.SPACE + clientId);
                                     printWriter.flush();
 
 //                                    System.out.println("Coordinator sent COMMIT to all cohorts");
