@@ -98,10 +98,10 @@ public class Coordinator {
 
     }
 
-    public synchronized void stopConnection(PrintStream coordinatorPrintStream,BufferedReader bufferReader,Socket socket){
+    public synchronized void stopConnection(ObjectOutputStream oos,ObjectInputStream ois,Socket socket){
         try {
-            coordinatorPrintStream.close();
-            bufferReader.close();
+            oos.close();
+            ois.close();
             socket.close();
         }catch(IOException e){
             e.printStackTrace();
@@ -133,18 +133,15 @@ public class Coordinator {
         }
     }
 
-    //TODO update/insert;read, 這邊mod要改成7
-    public int[] selectServer(int fileId){
-        return new int[]{fileId%5,(fileId+1)%5,(fileId+2)%5};
-    }
 
     public List<Integer> selectServer1(int fileId){
         List<Integer> list = new ArrayList<>();
-        list.add(fileId%5);
-        list.add((fileId+1)%5);
-        list.add((fileId+2)%5);
+        list.add(fileId%7);
+        list.add((fileId+1)%7);
+        list.add((fileId+2)%7);
         return list;
     }
+
 
     public void read(List<Integer> servers, int fileId, int clientId){
 
@@ -218,6 +215,7 @@ public class Coordinator {
                 final int count = n_time;
 
                 // build connections from cohorts
+                System.out.println("Server size: "+servers.size());
                 for (int i = 0; i < servers.size(); i++) {
                     final int pidIndex = i;
                     new Thread(new Runnable() {
@@ -265,7 +263,7 @@ public class Coordinator {
                                 // If received message is AGREED[REGISTER]
                                 if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
 
-                                    if (pidIndex + 1 == servers.size()) { //TODO 所有伺服器都連接上後
+                                    if (pidIndex + 1 == servers.size()) {
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
 //                                    c.start();
                                         data.setCommitMade(true);
@@ -285,8 +283,8 @@ public class Coordinator {
                                 }
 
 
-                                //Close //TODO 改變CSMessage
-                                //stopConnection(coordinatorPrintStream, bufferReader, socket);
+                                //Close
+                                stopConnection(oos, ois, socket);
 
                             } catch (SocketTimeoutException | ClassNotFoundException e){
                                 e.printStackTrace();
@@ -295,6 +293,7 @@ public class Coordinator {
                                 e.printStackTrace();
 
                                 //impose let others channel works
+                                servers.remove(pidIndex);
                                 data.setCommitMade(true);
                                 data.incrementAgree();
                                 data.incrementAck();
@@ -319,7 +318,7 @@ public class Coordinator {
                     }
                 }
 
-                Thread.sleep(5000);
+                //Thread.sleep(5000);
             }
 
             /*

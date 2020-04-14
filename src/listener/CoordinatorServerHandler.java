@@ -131,8 +131,8 @@ public class CoordinatorServerHandler{
 //                        System.out.println(
 //                                "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
 
-                        while (true) {
-                            CSMessage received = (CSMessage) ois.readObject();
+                        CSMessage received = null;
+                        while ((received = (CSMessage)ois.readObject()) != null) {
                             //System.out.println(inLine);
 
                             if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {

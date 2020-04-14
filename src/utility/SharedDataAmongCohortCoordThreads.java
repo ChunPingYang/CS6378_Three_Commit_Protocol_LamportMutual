@@ -11,6 +11,7 @@ public class SharedDataAmongCohortCoordThreads {
      *
      */
     private Map<String, Map<String,Boolean>> agreeMap;
+    private volatile boolean channelDisabled = false;
 
     public SharedDataAmongCohortCoordThreads(int maxCoordinator){
         String[] fileList = new String[]{"1","2","3","4"};
@@ -31,5 +32,13 @@ public class SharedDataAmongCohortCoordThreads {
 
     public boolean isAgree(String clientId,String fileId){
         return agreeMap.get(clientId).get(fileId);
+    }
+
+    public synchronized boolean isChannelDisabled() {
+        return channelDisabled;
+    }
+
+    public synchronized void setChannelDisabled(boolean channelDisabled) {
+        this.channelDisabled = channelDisabled;
     }
 }

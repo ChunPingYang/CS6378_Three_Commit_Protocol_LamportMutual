@@ -36,6 +36,7 @@ public class LamportMutex {
             return;
         }
         messageQueue.add(request);
+        System.err.println("after adding to queue request: "+request.toString());
 
         pendingReplies = Collections.synchronizedSet(request.getNeighbors());
         pendingRequests = Collections.synchronizedSet(request.getNeighbors());
@@ -65,7 +66,7 @@ public class LamportMutex {
 
         while(messageQueue.isEmpty()){
             System.err.println("Message Queue is Empty");
-            Thread.sleep(500);
+            Thread.sleep(1000);
         }
 
         while(!headMessage().getRole().equals(StringConstants.ROLE_COORDINATOR)){

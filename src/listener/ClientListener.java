@@ -92,14 +92,14 @@ public class ClientListener implements Runnable{
 //                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
 
                     //Handle request to be synchronized
-                    cohort.request(received); //TODO 送到servers同步
-                    String clientId = String.valueOf(received.getClientId());
-                    String fileId = String.valueOf(received.getFileId());
-                    while (!data.isAgree(clientId, fileId)) {
-                        System.out.println("waiting server.....");
-                        Thread.sleep(500);
-                    }
-                    data.getAgreeMap().get(clientId).replace(fileId, false);
+//                    cohort.request(received); //TODO 送到servers同步
+//                    String clientId = String.valueOf(received.getClientId());
+//                    String fileId = String.valueOf(received.getFileId());
+//                    while (!data.isAgree(clientId, fileId) && !data.isChannelDisabled()) {
+//                        System.out.println("waiting server.....");
+//                        Thread.sleep(500);
+//                    }
+//                    if(!data.isChannelDisabled()){data.getAgreeMap().get(clientId).replace(fileId, false);}
 
 //                    cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE + serverPort[id]);
 //                    cohortPrintStream.flush();
@@ -218,6 +218,8 @@ public class ClientListener implements Runnable{
 //                        cohortSocket.shutdownOutput();
 //                        cohortSocket.close();
                     cohortListener.close();
+                    data.setChannelDisabled(true);
+                    cohort.initAfterChannelDisabled();
                 }
 
 

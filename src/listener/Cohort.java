@@ -5,6 +5,7 @@ import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
 
 import java.io.*;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -115,7 +116,7 @@ public class Cohort {
     }
 
     public void initServerToServer(int[] ids, int id){
-        numNeighbors = ids.length-1;
+        //numNeighbors = ids.length-1;
         incomingNeibs = Collections.synchronizedMap(new HashMap<>());
         outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
         incomingChannels = Collections.synchronizedMap(new HashMap<>());
@@ -148,14 +149,14 @@ public class Cohort {
                     @Override
                     public void run() {
                         boolean isConnected = false;
-                        while(!isConnected){
+                        while(!isConnected && !data.isChannelDisabled()){
                             try {
                                 // connect to other servers
-                                Socket socket = new Socket(serverAdd[other],serverPort[other]);
-                                outcomingNeibs.put(ids[other],socket);
-                                outcomingChannels.put(ids[other],new ObjectOutputStream(socket.getOutputStream()));
+                                Socket socket = new Socket(serverAdd[other], serverPort[other]);
+                                outcomingNeibs.put(ids[other], socket);
+                                outcomingChannels.put(ids[other], new ObjectOutputStream(socket.getOutputStream()));
                                 isConnected = true;
-                                System.out.println("connect to "+other);
+                                System.out.println("connect to " + other);
                             } catch (IOException e) {
                                 try{
                                     Thread.sleep(100);
@@ -195,6 +196,17 @@ public class Cohort {
 
     }
 
+    public synchronized void initAfterChannelDisabled(){
+        data = new SharedDataAmongCohortCoordThreads(maxCoordinator);
+        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
+        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
+        incomingChannels = Collections.synchronizedMap(new HashMap<>());
+        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
+        neighbors = Collections.synchronizedSet(new HashSet<>());
+        clocks = Collections.synchronizedMap(new HashMap<>());
+        mutexes =  Collections.synchronizedMap(new HashMap<>());
+    }
+
     /**
      * A method that would be executed by the thread
      */
@@ -202,7 +214,7 @@ public class Cohort {
 
         try {
 
-            FileAccessor fileAccessor = new FileAccessor();
+            //FileAccessor fileAccessor = new FileAccessor();
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
@@ -244,7 +256,7 @@ public class Cohort {
     // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
     // if it is empty, do request and broadcast
     public synchronized void request(CSMessage message) throws InterruptedException, IOException {
-        System.err.println(message.toString());
+        System.err.println("request: "+message.toString());
         String processId = String.valueOf(message.getProcessId());
         String clientId = String.valueOf(message.getClientId());
         String fileId = String.valueOf(message.getFileId());

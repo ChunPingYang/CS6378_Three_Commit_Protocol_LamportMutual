@@ -36,6 +36,7 @@ public class StringConstants {
 
 	public static String ROLE_COORDINATOR = "COORDINATOR";
 	public static String ROLE_COHORT = "COHORT";
+	public static String ROLE_SHUTDOWNER = "SHUTDOWNER";
 
 	public static final String LAMPORT_REQUEST = "REQUEST";
 	public static final String LAMPORT_REPLY = "REPLY";

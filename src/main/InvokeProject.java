@@ -20,8 +20,8 @@ public class InvokeProject {
 	private static Coordinator coordinatorProcess;
 	private static Cohort otherProcess;
 	private static ServerSelector selectorProcess;
-	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1"};
-	private static int[] portsArr = new int[]{5000,5001,5002,5003,5004};
+	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1"};
+	private static int[] portsArr = new int[]{5000,5001,5002,5003,5004,5005,5006};
 
 	//TODO update/insert;read, 這邊mod要改成7
 	public static List<Integer> selectServer(int fileId){
@@ -60,7 +60,7 @@ public class InvokeProject {
 			System.out.println("Enter server index:");
 			Scanner in = new Scanner(System.in);
 			int index = in.nextInt();
-			int[] ids = new int[]{0,1,2,3,4};
+			int[] ids = new int[]{0,1,2,3,4,5,6};
 			otherProcess = new Cohort();
 			otherProcess = extractFromConfigFile.getConfigDataForProcess(args[1]);
 			otherProcess.readServerConfig(serverList,portsArr);
@@ -74,7 +74,7 @@ public class InvokeProject {
 		    System.out.println("Enter server index being disabled:");
             Scanner in = new Scanner(System.in);
             int index = in.nextInt();
-            int[] ids = new int[]{0,1,2,3,4};
+            int[] ids = new int[]{0,1,2,3,4,5,6};
 			selectorProcess = new ServerSelector();
             selectorProcess.readServerConfig(serverList,portsArr);
 

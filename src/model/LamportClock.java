@@ -31,10 +31,4 @@ public class LamportClock {
         }
     }
 
-    public static void main(String[] args) {
-//        LamportClock clock = new LamportClock();
-//        Message msg = new Message(5,2,4,"REQUEST","f1","");
-//        clock.msgEvent(msg);
-//        System.out.println(clock.clock);
-    }
 }
