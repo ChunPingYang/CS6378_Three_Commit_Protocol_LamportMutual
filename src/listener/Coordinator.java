@@ -1,6 +1,7 @@
 package listener;
 
 import com.sun.tools.javac.util.StringUtils;
+import model.CSMessage;
 import model.StringConstants;
 import utility.SharedDataAmongCoordThreads;
 
@@ -81,8 +82,10 @@ public class Coordinator {
     public void start(int clientId,int fileId, String action) {
         //initializeArray();
 
-        int[] servers = selectServer(fileId);
-        System.out.println(Arrays.toString(servers));
+        //int[] servers = selectServer(fileId);
+        List<Integer> servers = selectServer1(fileId);
+        //System.out.println(Arrays.toString(servers));
+        System.out.println(servers.toString());
 
         if(StringConstants.ACTION_WRITE.equalsIgnoreCase(action))
         {
@@ -90,7 +93,7 @@ public class Coordinator {
 
         }else if(StringConstants.ACTION_READ.equalsIgnoreCase(action))
         {
-            read(servers,fileId);
+            read(servers,fileId,clientId);
         }
 
     }
@@ -135,48 +138,75 @@ public class Coordinator {
         return new int[]{fileId%5,(fileId+1)%5,(fileId+2)%5};
     }
 
-    public void read(int[] servers, int fileId){
+    public List<Integer> selectServer1(int fileId){
+        List<Integer> list = new ArrayList<>();
+        list.add(fileId%5);
+        list.add((fileId+1)%5);
+        list.add((fileId+2)%5);
+        return list;
+    }
+
+    public void read(List<Integer> servers, int fileId, int clientId){
 
         Random rand = new Random();
         int pidIndex = rand.nextInt(3);
 
         try {
 
-            System.out.println("Server: "+serverAdd[servers[pidIndex]]+", Port: "+serverPort[servers[pidIndex]]);
-            Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
-            PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-            int processId = servers[pidIndex] + 1;
-            coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
-            coordinatorPrintStream.flush();
+            System.out.println("Server: "+serverAdd[servers.get(pidIndex)]+", Port: "+serverPort[servers.get(pidIndex)]);
+            Socket socket = new Socket(serverAdd[servers.get(pidIndex)], serverPort[servers.get(pidIndex)]);
+            int processId = servers.get(pidIndex);
+//            PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
+//            coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+//            coordinatorPrintStream.flush();
+            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
-            BufferedReader bufferReader = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream()));
+            CSMessage push = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                            StringConstants.MESSAGE_REGISTER,
+                                            processId,
+                                            clientId,
+                                            fileId,
+                                            0,
+                                            new HashSet<>());
+            oos.writeObject(push);
+            oos.flush();
 
-            String inLine = null;
-            while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+//            BufferedReader bufferReader = new BufferedReader(
+//                    new InputStreamReader(socket.getInputStream()));
 
-                if (inLine.split(StringConstants.SPACE)[0]
-                        .startsWith(StringConstants.MESSAGE_AGREED))
+            CSMessage received = null;
+            while ((received = (CSMessage)ois.readObject()) != null) {
+
+                if (received.getMessage().equals(StringConstants.MESSAGE_AGREED))
                 {
-                    coordinatorPrintStream.println(StringConstants.ACTION_READ + StringConstants.SPACE + fileId);
-                    coordinatorPrintStream.flush();
+//                    coordinatorPrintStream.println(StringConstants.ACTION_READ + StringConstants.SPACE + fileId);
+//                    coordinatorPrintStream.flush();
+                    CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                                    StringConstants.ACTION_READ,
+                                                    processId,
+                                                    clientId,
+                                                    fileId,
+                                             0,
+                                                    new HashSet<>());
+                    oos.writeObject(sent);
+                    oos.flush();
                 }
 
-                if(inLine.split(StringConstants.SPACE)[0]
-                        .startsWith(StringConstants.MESSAGE_FILE_NOT_EXIST)){
+                if(received.getMessage().equals(StringConstants.MESSAGE_FILE_NOT_EXIST)){
                     System.out.println("The file does not exist");
                     //TODO 關閉socket
                 }
             }
 
-        }catch (IOException e) {
+        }catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
 
     }
 
 
-    public void write(int[] servers, int fileId, int clientId){
+    public void write(List<Integer> servers, int fileId, int clientId){
 
         try {
 
@@ -188,7 +218,7 @@ public class Coordinator {
                 final int count = n_time;
 
                 // build connections from cohorts
-                for (int i = 0; i < servers.length; i++) {
+                for (int i = 0; i < servers.size(); i++) {
                     final int pidIndex = i;
                     new Thread(new Runnable() {
 
@@ -197,50 +227,70 @@ public class Coordinator {
                             try {
 
 //                              System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
-                                Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
+                                Socket socket = new Socket(serverAdd[servers.get(pidIndex)], serverPort[servers.get(pidIndex)]);
                                 //int processId = servers[pidIndex] + 1;
-                                int processId = servers[pidIndex];
-                                PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-                                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
-                                                                processId);
-                                coordinatorPrintStream.flush();
+                                int processId = servers.get(pidIndex);
+//                                PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
+//                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+//                                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
+//                                                                processId);
+//                                coordinatorPrintStream.flush();
 
+                                //the servers sent from current one
+                                Set<Integer> otherServers = new HashSet<>();
+                                for(int i=0;i<servers.size();i++){
+                                    if(i!=pidIndex){
+                                        otherServers.add(servers.get(pidIndex));
+                                    }
+                                }
 
-                                BufferedReader bufferReader = new BufferedReader(
-                                        new InputStreamReader(socket.getInputStream()));
+                                ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+                                ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
-                                String inLine = bufferReader.readLine();
+                                CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                                                    StringConstants.MESSAGE_REGISTER,
+                                                                    processId,
+                                                                    clientId,
+                                                                    fileId,
+                                                                    count,
+                                                                    otherServers);
+                                oos.writeObject(sent);
+                                oos.flush();
+
+//                                BufferedReader bufferReader = new BufferedReader(
+//                                        new InputStreamReader(socket.getInputStream()));
+//                                String inLine = bufferReader.readLine();
+
+                                CSMessage received = (CSMessage)ois.readObject();
                                 // If received message is AGREED[REGISTER]
-                                if (inLine.startsWith(StringConstants.MESSAGE_AGREED)) {
+                                if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
 
-                                    if (pidIndex + 1 == servers.length) { //TODO 所有伺服器都連接上後
+                                    if (pidIndex + 1 == servers.size()) { //TODO 所有伺服器都連接上後
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
 //                                    c.start();
                                         data.setCommitMade(true);
                                     }
 
-                                    //the servers sent from current one
-                                    int[] otherServers = new int[2];
-                                    int index = 0;
-                                    for(int i=0;i<servers.length;i++){
-                                        if(i!=pidIndex){
-                                            otherServers[index]=servers[i];
-                                            index++;
-                                        }
-                                    }
-
-                                    new CoordinatorServerHandler(socket, servers.length, bufferReader, processId, fileId, clientId, count, otherServers,data).start();
+                                    new CoordinatorServerHandler(socket,
+                                                                    servers.size(),
+                                                                    ois,
+                                                                    oos,
+                                                                    processId,
+                                                                    fileId,
+                                                                    clientId,
+                                                                    count,
+                                                                    otherServers,
+                                                                    data).start();
 //                                  System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
 
-                                //Close
-                                stopConnection(coordinatorPrintStream, bufferReader, socket);
+                                //Close //TODO 改變CSMessage
+                                //stopConnection(coordinatorPrintStream, bufferReader, socket);
 
-                            } catch (SocketTimeoutException e){
+                            } catch (SocketTimeoutException | ClassNotFoundException e){
                                 e.printStackTrace();
-                                System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
+                                //System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                             } catch (IOException e) {
                                 e.printStackTrace();
 

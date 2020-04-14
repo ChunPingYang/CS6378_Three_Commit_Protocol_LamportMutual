@@ -1,5 +1,6 @@
 package listener;
 
+import model.CSMessage;
 import model.StringConstants;
 import utility.FileAccessor;
 import utility.SharedDataAmongCoordThreads;
@@ -7,6 +8,8 @@ import utility.SharedDataAmongCoordThreads;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class CoordinatorServerHandler{
 
@@ -16,7 +19,9 @@ public class CoordinatorServerHandler{
     private Socket cohortSocket = null;
     private PrintWriter printWriter = null;
     private DataInputStream dataInputStream = null;
-    private BufferedReader bufferReader = null;
+    //private BufferedReader bufferReader = null;
+    private ObjectInputStream ois = null;
+    private ObjectOutputStream oos = null;
 
     /**
      * Boolean variables required to not allow the coordinator to send the same
@@ -38,7 +43,7 @@ public class CoordinatorServerHandler{
     private int fileId;
     private int n_time;
     private int clientId;
-    private int[] otherServers;
+    private Set<Integer> otherServers;
 
     /**
      * Variable to access shared data among different handler threads
@@ -60,11 +65,20 @@ public class CoordinatorServerHandler{
     /**
      * A parameterized constructor that initializes its local variables
      */
-    public CoordinatorServerHandler(Socket cohortSocket, int maxCohort, BufferedReader bufferReader, int pId,
-                                    int fileId, int clientId, int n_time, int[] otherServers, SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
+    public CoordinatorServerHandler(Socket cohortSocket,
+                                    int maxCohort,
+                                    ObjectInputStream ois,
+                                    ObjectOutputStream oos,
+                                    int pId,
+                                    int fileId,
+                                    int clientId,
+                                    int n_time,
+                                    Set<Integer> otherServers,
+                                    SharedDataAmongCoordThreads sharedDataAmongCoordThreads) {
         this.cohortSocket = cohortSocket;
         this.maxCohort = maxCohort;
-        this.bufferReader = bufferReader;
+        this.ois = ois;
+        this.oos = oos;
         this.processId = pId;
         this.fileId = fileId;
         this.n_time = n_time;
@@ -88,7 +102,7 @@ public class CoordinatorServerHandler{
 
         try {
 
-                printWriter = new PrintWriter(cohortSocket.getOutputStream());
+                //oos = new ObjectOutputStream(cohortSocket.getOutputStream());
 
                 while (true) {
 
@@ -96,24 +110,32 @@ public class CoordinatorServerHandler{
                     if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
                         isCommitRequest = true;
-                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-                                            StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE +
-                                            processId + StringConstants.SPACE +
-                                            clientId + StringConstants.SPACE +
-                                            fileId + StringConstants.SPACE +
-                                            n_time + StringConstants.SPACE +
-                                            otherServers[0]+":"+otherServers[1]);
-                        printWriter.flush();
+//                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+//                                            StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE +
+//                                            processId + StringConstants.SPACE +
+//                                            clientId + StringConstants.SPACE +
+//                                            fileId + StringConstants.SPACE +
+//                                            n_time + StringConstants.SPACE +
+//                                            otherServers[0]+":"+otherServers[1]);
+//                        printWriter.flush();
+                        CSMessage push = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                                        StringConstants.MESSAGE_COMMIT_REQUEST,
+                                                        processId,
+                                                        clientId,
+                                                        fileId,
+                                                        n_time,
+                                                        otherServers);
+                        oos.writeObject(push);
+                        oos.flush();
 
 //                        System.out.println(
 //                                "Coordinator sent COMMIT_REQUEST message to all Cohorts. The state chagnges from Q1 --> W1");
 
-                        String inLine = null;
-                        while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+                        while (true) {
+                            CSMessage received = (CSMessage) ois.readObject();
                             //System.out.println(inLine);
 
-                            if (inLine.split(StringConstants.SPACE)[0]
-                                    .startsWith(StringConstants.MESSAGE_AGREED)) {
+                            if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
 
                                 sharedDataAmongCoordThreads.incrementAgree();
 //                                System.out.println("Coordinator received AGREED from "
@@ -134,17 +156,27 @@ public class CoordinatorServerHandler{
 //                                System.out.println(
 //                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
-                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-                                                    StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+
-                                                    processId);
-                                printWriter.flush();
+//                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+//                                                    StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+
+//                                                    processId);
+//                                printWriter.flush();
+                                CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                                                StringConstants.MESSAGE_PREPARE,
+                                                                processId,
+                                                                clientId,
+                                                                fileId,
+                                                                n_time,
+                                                                otherServers);
+                                oos.writeObject(sent);
+                                oos.flush();
 
 //                                System.out.println("Coordinator sent PREPARE to all Cohorts");
                             }
 
                             // Received ACK Message
-                            if (inLine.split(StringConstants.SPACE)[0]
-                                    .startsWith(StringConstants.MESSAGE_ACK) && !coordinatorFail) {
+                            if (received.getMessage().equals(StringConstants.MESSAGE_ACK)
+                                    && !coordinatorFail)
+                            {
                                 sharedDataAmongCoordThreads.incrementAck();
 //                                System.out.println("Coordinator received ACK from "
 //                                        + sharedDataAmongCoordThreads.getCountAckFromCohort() + " Cohort(s)");
@@ -162,12 +194,21 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-                                                        StringConstants.MESSAGE_COMMIT + StringConstants.SPACE +
-                                                        processId + StringConstants.SPACE +
-                                                        fileId + StringConstants.SPACE +
-                                                        n_time + StringConstants.SPACE + clientId);
-                                    printWriter.flush();
+//                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
+//                                                        StringConstants.MESSAGE_COMMIT + StringConstants.SPACE +
+//                                                        processId + StringConstants.SPACE +
+//                                                        fileId + StringConstants.SPACE +
+//                                                        n_time + StringConstants.SPACE + clientId);
+//                                    printWriter.flush();
+                                        CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
+                                                                        StringConstants.MESSAGE_COMMIT,
+                                                                        processId,
+                                                                        clientId,
+                                                                        fileId,
+                                                                        n_time,
+                                                                        otherServers);
+                                        oos.writeObject(sent);
+                                        oos.flush();
 
 //                                    System.out.println("Coordinator sent COMMIT to all cohorts");
 //
@@ -182,9 +223,9 @@ public class CoordinatorServerHandler{
                             }
 
                             // Received COMMIT_COMPLETE Message
-                            if (inLine.split(StringConstants.SPACE)[0]
-                                    .startsWith(StringConstants.MESSAGE_COMMIT_COMPLETE) && !isCommitCompleted && !coordinatorFail) {
-
+                            if (received.getMessage().equals(StringConstants.MESSAGE_COMMIT_COMPLETE)
+                                    && !isCommitCompleted && !coordinatorFail)
+                            {
                                 sharedDataAmongCoordThreads.incrementCommitCompletedFromCohort();
 //                                System.out.println("Coordinator received COMMIT_COMPLETE from "
 //                                        + sharedDataAmongCoordThreads.getCountCommitCompletedFromCohort() + " Cohort(s)");
@@ -204,8 +245,8 @@ public class CoordinatorServerHandler{
                             }
 
                             // Received ABORT Message
-                            if (inLine.split(StringConstants.SPACE)[0]
-                                    .startsWith(StringConstants.MESSAGE_ABORT) && !isAborted && !coordinatorFail) {
+                            if (received.getMessage().equals(StringConstants.MESSAGE_ABORT)
+                                    && !isAborted && !coordinatorFail) {
 
                             }
 

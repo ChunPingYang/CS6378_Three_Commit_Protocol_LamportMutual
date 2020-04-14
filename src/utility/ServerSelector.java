@@ -27,7 +27,7 @@ public class ServerSelector {
         //while(true) {
 
             try {
-
+//TODO 改成ObjectInputStream
                 System.out.println(serverAdd[id] + ", " + serverPort[id]);
                 Socket socket = new Socket(serverAdd[id], serverPort[id]);
                 socket.setSoTimeout(5000);
