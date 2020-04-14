@@ -1,9 +1,6 @@
 package listener;
 
-import model.LamportClock;
-import model.LamportMutex;
-import model.Message;
-import model.StringConstants;
+import model.*;
 import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
 
@@ -246,13 +243,13 @@ public class Cohort {
 
     // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
     // if it is empty, do request and broadcast
-    public synchronized void request(String inLine) throws InterruptedException, IOException {
-        System.err.println(inLine);
-        String processId = inLine.split(StringConstants.SPACE)[2];
-        String clientId = inLine.split(StringConstants.SPACE)[3];
-        String fileId = inLine.split(StringConstants.SPACE)[4];
-        String seqNum = inLine.split(StringConstants.SPACE)[5];
-        String othersCohorts = inLine.split(StringConstants.SPACE)[6];
+    public synchronized void request(CSMessage message) throws InterruptedException, IOException {
+        System.err.println(message.toString());
+        String processId = String.valueOf(message.getProcessId());
+        String clientId = String.valueOf(message.getClientId());
+        String fileId = String.valueOf(message.getFileId());
+        String seqNum = String.valueOf(message.getN_time());
+        Set<Integer> otherServers = message.getOtherServers();
 
         LamportClock clock = clocks.get(fileId);
         clock.increment();
@@ -262,9 +259,9 @@ public class Cohort {
             Thread.sleep(1000);
         }
 
-        HashSet<Integer> otherServers = new HashSet<>();
-        otherServers.add(Integer.parseInt(othersCohorts.split(":")[0]));
-        otherServers.add(Integer.parseInt(othersCohorts.split(":")[1]));
+//        HashSet<Integer> otherServers = new HashSet<>();
+//        otherServers.add(Integer.parseInt(othersCohorts.split(":")[0]));
+//        otherServers.add(Integer.parseInt(othersCohorts.split(":")[1]));
 
         Message request = new Message(clock.getClock(),
                                         processId,
@@ -282,7 +279,7 @@ public class Cohort {
     // for request, it may wait for a time to be broadcast(last operation not finished), so the clock time should be the time of message
     // but not the current clock
     public synchronized void broadcast(Message message) throws IOException {
-        HashSet<Integer> otherServers = message.getNeighbors();
+        Set<Integer> otherServers = message.getNeighbors();
         for(int neib:neighbors){
             if(otherServers.contains(neib))
             {

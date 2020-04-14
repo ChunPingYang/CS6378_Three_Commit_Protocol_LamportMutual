@@ -2,6 +2,7 @@ package model;
 
 import java.io.Serializable;
 import java.util.HashSet;
+import java.util.Set;
 
 public class Message implements Serializable,Comparable<Message> {
 
@@ -17,7 +18,7 @@ public class Message implements Serializable,Comparable<Message> {
     //private final String otherServers;
     private final String clientId;
     private final String role;
-    private HashSet<Integer> neighbors;
+    private Set<Integer> neighbors;
 
 //    public Message(int clock, int from , int to, String type, String fileName, String content){
 //        this.clock = clock;
@@ -28,7 +29,7 @@ public class Message implements Serializable,Comparable<Message> {
 //        this.content = content;
 //    }
 
-    public Message(int clock, String from, String to, String type, String clientId, String fileId, String seqNum, String role,HashSet<Integer> neighbors){
+    public Message(int clock, String from, String to, String type, String clientId, String fileId, String seqNum, String role, Set<Integer> neighbors){
         this.clock = clock;
         this.clientId = clientId;
         this.from = from;
@@ -37,7 +38,7 @@ public class Message implements Serializable,Comparable<Message> {
         this.fileId = fileId;
         this.seqNum = seqNum;
         this.role = role;
-        this.neighbors = new HashSet<>(neighbors);
+        this.neighbors = neighbors;
     }
 
     public int getClock(){
@@ -58,11 +59,11 @@ public class Message implements Serializable,Comparable<Message> {
 
     public String getRole() { return role; }
 
-    public HashSet<Integer> getNeighbors() {
+    public Set<Integer> getNeighbors() {
         return neighbors;
     }
 
-    public void setNeighbors(HashSet<Integer> neighbors) {
+    public void setNeighbors(Set<Integer> neighbors) {
         this.neighbors = neighbors;
     }
 

@@ -22,7 +22,7 @@ public class ServerListenner implements Runnable{
             System.out.println("serverListener "+cohort.getId()+" starts listening");
             while(true){
                 Message received = (Message)ois.readObject();
-                System.out.println("Server receives message from server"+ (Integer.parseInt(received.getFrom())+1)+
+                System.out.println("Server receives message from server"+ (Integer.parseInt(received.getFrom()))+
                                     " Sequence number: "+received.getSeqNum()+
                                     " Client: "+received.getClientId());
                 cohort.processMessage(received);

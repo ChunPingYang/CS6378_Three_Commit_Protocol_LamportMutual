@@ -240,7 +240,7 @@ public class Coordinator {
                                 Set<Integer> otherServers = new HashSet<>();
                                 for(int i=0;i<servers.size();i++){
                                     if(i!=pidIndex){
-                                        otherServers.add(servers.get(pidIndex));
+                                        otherServers.add(servers.get(i));
                                     }
                                 }
 
