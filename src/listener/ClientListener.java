@@ -174,7 +174,7 @@ public class ClientListener implements Runnable{
 //                                System.out.println("...Cohort Terminates...");
 //                                System.err.println();
 
-                    break;
+
                 }
 
                 // Operation Read Message received

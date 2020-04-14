@@ -14,7 +14,7 @@ public class SharedDataAmongCohortCoordThreads {
     private volatile boolean channelDisabled = false;
 
     public SharedDataAmongCohortCoordThreads(int maxCoordinator){
-        String[] fileList = new String[]{"1","2","3","4"};
+        String[] fileList = new String[]{"1","2","3","4","5"};
         agreeMap = Collections.synchronizedMap(new HashMap<>());
         for(int i=0;i<maxCoordinator;i++){
             Map<String,Boolean> fileMap = Collections.synchronizedMap(new HashMap<>());

@@ -240,6 +240,8 @@ public class CoordinatorServerHandler{
 
 //                                System.out.println("...Coordinator Thread terminates...");
 //                                System.out.println();
+                                oos.writeObject(null);
+                                oos.flush();
 
                                 break;
                             }

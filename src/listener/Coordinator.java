@@ -318,7 +318,7 @@ public class Coordinator {
                     }
                 }
 
-                //Thread.sleep(5000);
+                //Thread.sleep(3000);
             }
 
             /*

@@ -14,6 +14,7 @@ import java.util.Scanner;
  * @author dsr170230
  * @version 7.0
  */
+//TODO 當多個客戶端傳送時，傳送的伺服器都相同時，可以跑，但不完全一樣時，不能跑
 
 public class InvokeProject {
 	private static ReadConfigFile extractFromConfigFile;
@@ -23,14 +24,7 @@ public class InvokeProject {
 	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1"};
 	private static int[] portsArr = new int[]{5000,5001,5002,5003,5004,5005,5006};
 
-	//TODO update/insert;read, 這邊mod要改成7
-	public static List<Integer> selectServer(int fileId){
-		List<Integer> list = new ArrayList<Integer>();
-		list.add(fileId%5);
-		list.add((fileId+1)%5);
-		list.add((fileId+2)%5);
-		return list;
-	}
+
 	/**
 	 * 
 	 */

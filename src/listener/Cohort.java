@@ -126,7 +126,7 @@ public class Cohort {
         mutexes =  Collections.synchronizedMap(new HashMap<>());
 
         //TODO file list hard code
-        String[] a = new String[]{"1","2","3","4"};
+        String[] a = new String[]{"1","2","3","4","5"};
         List<String> fileList = Arrays.asList(a);
         for(String fileId:fileList){
             clocks.put(fileId,new LamportClock());
