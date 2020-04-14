@@ -34,7 +34,7 @@ public class StringConstants {
 	public static String ACTION_WRITE = "W";
 	public static String ACTION_READ = "R";
 
-	public static String ROLE_COORDINATOR = "CLIENT";
+	public static String ROLE_COORDINATOR = "COORDINATOR";
 	public static String ROLE_COHORT = "COHORT";
 
 	public static final String LAMPORT_REQUEST = "REQUEST";
