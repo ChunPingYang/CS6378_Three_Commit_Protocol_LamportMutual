@@ -3,6 +3,7 @@ package main;
 import listener.Cohort;
 import listener.Coordinator;
 import utility.ReadConfigFile;
+import utility.ServerSelector;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,7 @@ public class InvokeProject {
 	private static ReadConfigFile extractFromConfigFile;
 	private static Coordinator coordinatorProcess;
 	private static Cohort otherProcess;
+	private static ServerSelector selectorProcess;
 	private static String[] serverList = {"127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1","127.0.0.1"};
 	private static int[] portsArr = new int[]{5000,5001,5002,5003,5004};
 
@@ -51,10 +53,11 @@ public class InvokeProject {
 			String action = actionInput.next();
 			coordinatorProcess.start(clientId,fileId,action);
 
-		} else {
+		} else if(args[0].equals("cohort")) {
+
 			extractFromConfigFile = new ReadConfigFile(false);
 
-			System.out.println("Enter server number:");
+			System.out.println("Enter server index:");
 			Scanner in = new Scanner(System.in);
 			int index = in.nextInt();
 			int[] ids = new int[]{0,1,2,3,4};
@@ -65,6 +68,17 @@ public class InvokeProject {
 			otherProcess.initServerToServer(ids,ids[index]);
 
 			otherProcess.start(ids[index]);
-		}
+
+		} else {
+
+		    System.out.println("Enter server index being disabled:");
+            Scanner in = new Scanner(System.in);
+            int index = in.nextInt();
+            int[] ids = new int[]{0,1,2,3,4};
+			selectorProcess = new ServerSelector();
+            selectorProcess.readServerConfig(serverList,portsArr);
+
+            selectorProcess.select(ids[index]);
+        }
 	}
 }

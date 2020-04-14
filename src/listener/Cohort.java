@@ -201,7 +201,7 @@ public class Cohort {
     /**
      * A method that would be executed by the thread
      */
-    public void start(int id) {
+    public void start(int currentServerId) {
 
         try {
 
@@ -209,13 +209,29 @@ public class Cohort {
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
-                System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[id]);
-                new Thread((new ClientListener(this,cohortSocket,id,serverPort,fileAccessor,data))).start();
+                System.out.println("Server: "+ InetAddress.getLocalHost().getHostName()+", Port: "+serverPort[currentServerId]);
+                new Thread((new ClientListener(cohortListener,this,cohortSocket,currentServerId,serverPort,fileAccessor,data))).start();
             }
 
         }catch(IOException e){
+            System.out.println(" ");
+            System.out.println(e.getMessage());
+        }catch(Exception e){
             e.printStackTrace();
         }
+
+//        try{
+//            Thread.sleep(5000);
+//        } catch (InterruptedException ex) {
+//            ex.printStackTrace();
+//        }
+//
+//        try {
+//            cohortListener = new ServerSocket(serverPort[currentServerId]);
+//            start(currentServerId);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
 //    public void stopConnection(){

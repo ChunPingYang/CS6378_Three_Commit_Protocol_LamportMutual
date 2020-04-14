@@ -5,12 +5,13 @@ import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.*;
 
 public class ClientListener implements Runnable{
 
     private Socket cohortSocket;
+    private ServerSocket cohortListener;
+
     private Cohort cohort;
     private SharedDataAmongCohortCoordThreads data;
 
@@ -26,8 +27,10 @@ public class ClientListener implements Runnable{
     private int id; // process id index
     private int pId; // process id
 
-    public ClientListener(Cohort cohort, Socket cohortSocket, int id, int[] serverPort, FileAccessor fileAccessor, SharedDataAmongCohortCoordThreads data){
+
+    public ClientListener(ServerSocket cohortListener, Cohort cohort, Socket cohortSocket, int id, int[] serverPort, FileAccessor fileAccessor, SharedDataAmongCohortCoordThreads data){
         this.cohort = cohort;
+        this.cohortListener = cohortListener;
         this.cohortSocket = cohortSocket;
         this.isAborted = false;
         this.isCommitted = false;
@@ -43,6 +46,9 @@ public class ClientListener implements Runnable{
     public void run() {
 
         try {
+
+            //while(true) {
+            //cohortSocket.setSoTimeout(10000);
 
             BufferedReader cohortBufferedReader =
                     new BufferedReader(
@@ -61,7 +67,8 @@ public class ClientListener implements Runnable{
 
 
             while (((inLine = cohortBufferedReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-//                              System.out.println(inLine);
+                System.out.println(inLine);
+
 
                 // COMMIT REQ received
                 if (inLine.split(StringConstants.SPACE)[1]
@@ -73,13 +80,13 @@ public class ClientListener implements Runnable{
                     cohort.request(inLine);
                     String clientId = inLine.split(StringConstants.SPACE)[3];
                     String fileId = inLine.split(StringConstants.SPACE)[4];
-                    while(!data.isAgree(clientId,fileId)){
+                    while (!data.isAgree(clientId, fileId)) {
                         System.out.println("waiting server.....");
                         Thread.sleep(500);
                     }
-                    data.getAgreeMap().get(clientId).replace(fileId,false);
+                    data.getAgreeMap().get(clientId).replace(fileId, false);
 
-                    cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE+ serverPort[id]);
+                    cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE + serverPort[id]);
                     cohortPrintStream.flush();
 
 //                                System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
@@ -89,7 +96,7 @@ public class ClientListener implements Runnable{
 
                 // Prepare Message received
                 if (inLine.split(StringConstants.SPACE)[1].equals(StringConstants.MESSAGE_PREPARE)
-                        && !sentAck){
+                        && !sentAck) {
 
 //                                System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
 
@@ -103,13 +110,13 @@ public class ClientListener implements Runnable{
                 // Commit Message received
                 if (inLine.split(StringConstants.SPACE)[1]
                         .equals(StringConstants.MESSAGE_COMMIT)
-                            && !isCommitted) {
+                        && !isCommitted) {
 
                     String fileId = inLine.split(StringConstants.SPACE)[3];
                     String n_time = inLine.split(StringConstants.SPACE)[4];
                     String clientId = inLine.split(StringConstants.SPACE)[5];
-                    outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
-                    fileAccessor.writeToOutputFile1(outputFile,"Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
+                    outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server" + pId + "/file" + fileId);
+                    fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
 
                     isCommitted = true;
 
@@ -127,23 +134,31 @@ public class ClientListener implements Runnable{
                 }
 
                 // Operation Read Message received
-                if(inLine.split(StringConstants.SPACE)[1].equals(StringConstants.ACTION_READ))
-                {
+                if (inLine.split(StringConstants.SPACE)[1].equals(StringConstants.ACTION_READ)) {
                     String fileId = inLine.split(StringConstants.SPACE)[1];
-                    outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
-                    if(outputFile.exists()) {
+                    outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server" + pId + "/file" + fileId);
+                    if (outputFile.exists()) {
                         boolean isExist = fileAccessor.readFileAndValidateExist(outputFile);
-                        if(!isExist){
+                        if (!isExist) {
                             cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
                             cohortPrintStream.flush();
                         }
-                    }else{
-                        cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
-                        cohortPrintStream.flush();
+                    } else {
+                            cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
+                            cohortPrintStream.flush();
                     }
 
                     break;
+
                 }
+
+                if (inLine.split(StringConstants.SPACE)[0].equals(StringConstants.MESSAGE_SHUTDOWN)) {
+//                        cohortSocket.shutdownInput();
+//                        cohortSocket.shutdownOutput();
+//                        cohortSocket.close();
+                    cohortListener.close();
+                }
+
 
                 // Abort Message received
                 if (inLine.split(StringConstants.SPACE)[1].equals(StringConstants.MESSAGE_ABORT)
@@ -153,7 +168,14 @@ public class ClientListener implements Runnable{
 
             }
 
+
+        } catch (SocketTimeoutException e) {
+            System.out.println(e.getMessage());
+            System.out.println("Socket status: " + cohortSocket.isClosed());
+            System.out.println("Inputstream status: " + cohortSocket.isInputShutdown());
         } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

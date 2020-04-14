@@ -5,9 +5,7 @@ import model.StringConstants;
 import utility.SharedDataAmongCoordThreads;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.util.*;
 
 public class Coordinator {
@@ -81,9 +79,10 @@ public class Coordinator {
      * fileId range from 1 to n
      */
     public void start(int clientId,int fileId, String action) {
-        initializeArray();
+        //initializeArray();
 
         int[] servers = selectServer(fileId);
+        System.out.println(Arrays.toString(servers));
 
         if(StringConstants.ACTION_WRITE.equalsIgnoreCase(action))
         {
@@ -91,47 +90,12 @@ public class Coordinator {
 
         }else if(StringConstants.ACTION_READ.equalsIgnoreCase(action))
         {
-            Random rand = new Random();
-            int pidIndex = rand.nextInt(3);
-
-            try {
-
-                System.out.println("Server: "+serverAdd[servers[pidIndex]]+", Port: "+serverPort[servers[pidIndex]]);
-                Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
-                PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-                int processId = servers[pidIndex] + 1;
-                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
-                                                processId);
-                coordinatorPrintStream.flush();
-
-                BufferedReader bufferReader = new BufferedReader(
-                        new InputStreamReader(socket.getInputStream()));
-
-                String inLine = null;
-                while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
-
-                    if (inLine.split(StringConstants.SPACE)[0]
-                            .startsWith(StringConstants.MESSAGE_AGREED))
-                    {
-                        coordinatorPrintStream.println(StringConstants.ACTION_READ + StringConstants.SPACE + fileId);
-                        coordinatorPrintStream.flush();
-                    }
-
-                    if(inLine.split(StringConstants.SPACE)[0]
-                            .startsWith(StringConstants.MESSAGE_FILE_NOT_EXIST)){
-                        System.out.println("The file does not exist");
-                    }
-                }
-
-            }catch (IOException e) {
-                e.printStackTrace();
-            }
+            read(servers,fileId);
         }
 
     }
 
-    public void stopConnection(PrintStream coordinatorPrintStream,BufferedReader bufferReader,Socket socket){
+    public synchronized void stopConnection(PrintStream coordinatorPrintStream,BufferedReader bufferReader,Socket socket){
         try {
             coordinatorPrintStream.close();
             bufferReader.close();
@@ -171,12 +135,53 @@ public class Coordinator {
         return new int[]{fileId%5,(fileId+1)%5,(fileId+2)%5};
     }
 
+    public void read(int[] servers, int fileId){
+
+        Random rand = new Random();
+        int pidIndex = rand.nextInt(3);
+
+        try {
+
+            System.out.println("Server: "+serverAdd[servers[pidIndex]]+", Port: "+serverPort[servers[pidIndex]]);
+            Socket socket = new Socket(serverAdd[servers[pidIndex]], serverPort[servers[pidIndex]]);
+            PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
+            int processId = servers[pidIndex] + 1;
+            coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
+            coordinatorPrintStream.flush();
+
+            BufferedReader bufferReader = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream()));
+
+            String inLine = null;
+            while (((inLine = bufferReader.readLine()) != null) && (!(inLine.isEmpty()))) {
+
+                if (inLine.split(StringConstants.SPACE)[0]
+                        .startsWith(StringConstants.MESSAGE_AGREED))
+                {
+                    coordinatorPrintStream.println(StringConstants.ACTION_READ + StringConstants.SPACE + fileId);
+                    coordinatorPrintStream.flush();
+                }
+
+                if(inLine.split(StringConstants.SPACE)[0]
+                        .startsWith(StringConstants.MESSAGE_FILE_NOT_EXIST)){
+                    System.out.println("The file does not exist");
+                    //TODO 關閉socket
+                }
+            }
+
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
     public void write(int[] servers, int fileId, int clientId){
 
         try {
 
             int n_time = 0;
-            while(n_time++ <= 10) {
+            while (n_time++ <= 30) {
 
                 data.initializeSharedData();
 
@@ -209,10 +214,9 @@ public class Coordinator {
                                 // If received message is AGREED[REGISTER]
                                 if (inLine.startsWith(StringConstants.MESSAGE_AGREED)) {
 
-                                    if (pidIndex+1 == servers.length) { //TODO 所有伺服器都連接上後
+                                    if (pidIndex + 1 == servers.length) { //TODO 所有伺服器都連接上後
 //                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
 //                                    c.start();
-                                        //break;
                                         data.setCommitMade(true);
                                     }
 
@@ -232,10 +236,19 @@ public class Coordinator {
 
 
                                 //Close
-                                stopConnection(coordinatorPrintStream,bufferReader,socket);
+                                stopConnection(coordinatorPrintStream, bufferReader, socket);
 
+                            } catch (SocketTimeoutException e){
+                                e.printStackTrace();
+                                System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                             } catch (IOException e) {
                                 e.printStackTrace();
+
+                                //impose let others channel works
+                                data.setCommitMade(true);
+                                data.incrementAgree();
+                                data.incrementAck();
+                                data.incrementCommitCompletedFromCohort();
                             }
 
 
@@ -247,11 +260,11 @@ public class Coordinator {
 
                 //used to validate all servers done commit
                 boolean serversCommitStatus = false;
-                while(!serversCommitStatus) {
+                while (!serversCommitStatus) {
                     serversCommitStatus = data.isServersCommitted();
                     //System.out.println("serversCommitStatus: "+serversCommitStatus);
 
-                    if(serversCommitStatus){
+                    if (serversCommitStatus) {
 //                        System.out.println("all servers commit........");
                     }
                 }
@@ -269,9 +282,6 @@ public class Coordinator {
     }
 
 
-    public void read(){
-
-    }
 
     /**
      * Getters and Setters for private variables
