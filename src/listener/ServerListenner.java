@@ -24,7 +24,8 @@ public class ServerListenner implements Runnable{
                 Message received = (Message)ois.readObject();
                 System.out.println("Server receives message from server"+ (Integer.parseInt(received.getFrom()))+
                                     " Sequence number: "+received.getSeqNum()+
-                                    " Client: "+received.getClientId());
+                                    " Client: "+received.getClientId()+
+                                    " Type: "+received.getType());
                 cohort.processMessage(received);
             }
         } catch (IOException | ClassNotFoundException | InterruptedException e) {

@@ -79,8 +79,8 @@ public class Message implements Serializable,Comparable<Message> {
             return Integer.parseInt(this.getClientId()) - Integer.parseInt(o.getClientId());
         }
     }
-//    @Override
-//    public String toString(){
-//        return clock + "," + from  + "," + to + "," + type + "," + fileName;
-//    }
+    @Override
+    public String toString(){
+        return clock + "," + from  + "," + to + "," + type + "," + clientId + "," + fileId + "," + seqNum + "," + role + "," + neighbors.toString();
+    }
 }
