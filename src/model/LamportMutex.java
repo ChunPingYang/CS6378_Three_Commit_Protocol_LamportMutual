@@ -9,7 +9,7 @@ import java.util.*;
 public class LamportMutex {
 
     // once a request is sent, do not send request until the last request is done
-    private boolean sendRequest = false;
+    private volatile boolean sendRequest = false;
     private volatile List<Message> messageQueue;
     // a set to store replies needed from neighbors to enter critical section
     private Set<Integer> pendingReplies;
@@ -40,7 +40,7 @@ public class LamportMutex {
         synchronized (messageQueue) {
             messageQueue.add(request);
         }
-        System.err.println("after adding to queue request: "+request.toString());
+        //System.err.println("after adding to queue request: "+messageQueue.size());
 
         pendingReplies = Collections.synchronizedSet(request.getNeighbors());
         pendingRequests = Collections.synchronizedSet(request.getNeighbors());
@@ -69,20 +69,17 @@ public class LamportMutex {
         }
 
         boolean x;
-        synchronized(messageQueue){
+//        synchronized(messageQueue){
             x = messageQueue.isEmpty();
-        }
+//        }
         while(x){
             System.err.println("Message Queue is Empty");
             Thread.sleep(1000);
-            synchronized(messageQueue){
-                System.err.println("queue....");
-                x = messageQueue.isEmpty();
-            }
+//            synchronized(messageQueue){
+//                x = messageQueue.isEmpty();
+//            }
+            x = messageQueue.isEmpty();
         }
-//        while(messageQueue.isEmpty()){
-//            Thread.sleep(1000);
-//        }
 
         while(!headMessage().getRole().equals(StringConstants.ROLE_COORDINATOR)){
             System.err.println("Message is not from coordinator");
@@ -90,12 +87,16 @@ public class LamportMutex {
         }
 
         Message head = headMessage();
-        while(!(head.getClientId().equals(request.getClientId())
-                && head.getFileId().equals(request.getFileId())
-                && head.getSeqNum().equals(request.getSeqNum())))
+        boolean y = head.getClientId().equals(request.getClientId())
+                        && head.getFileId().equals(request.getFileId())
+                        && head.getSeqNum().equals(request.getSeqNum());
+        while(!y)
         {
             System.err.println("the head message is not the same as request");
-            Thread.sleep(500);
+            Thread.sleep(1000);
+            y = head.getClientId().equals(request.getClientId())
+                    && head.getFileId().equals(request.getFileId())
+                    && head.getSeqNum().equals(request.getSeqNum());
         }
 
         pendingRequests.remove(Integer.parseInt(request.getFrom()));
@@ -120,20 +121,12 @@ public class LamportMutex {
         }
         pendingReplies.remove(Integer.parseInt(reply.getFrom()));
 
-//        if(pendingReplies.isEmpty())
-//        {
-//            //messageQueue.remove(0);
-//            //sendRequest = false;
-//            String clientId = reply.getClientId();
-//            String fileId = reply.getFileId();
-//            Map<String,Map<String,Boolean>> agreeMap = data.getAgreeMap();
-//            agreeMap.get(clientId).replace(fileId,true); //can deliver "agree" message to coordinator
-//        }
     }
 
     public synchronized boolean canEnterCriticalSection(){
         String pId = String.valueOf(cohort.getId());
-        if(sendRequest && pendingReplies.isEmpty() && pendingRequests.isEmpty() && (!messageQueue.isEmpty() && messageQueue.get(0).getFrom().equals(pId))){
+        if(sendRequest && pendingReplies.isEmpty() && pendingRequests.isEmpty()
+                        && (!messageQueue.isEmpty() && messageQueue.get(0).getFrom().equals(pId))){
             return true;
         }
         return false;

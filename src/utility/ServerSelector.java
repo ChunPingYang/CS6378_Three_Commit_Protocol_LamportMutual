@@ -32,9 +32,7 @@ public class ServerSelector {
                 Socket socket = new Socket(serverAdd[id], serverPort[id]);
                 socket.setSoTimeout(5000);
                 int processId = id;
-//                PrintStream selectorPrintStream = new PrintStream(socket.getOutputStream());
-//                selectorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
-//                selectorPrintStream.flush();
+
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
@@ -48,15 +46,11 @@ public class ServerSelector {
                 oos.writeObject(push);
                 oos.flush();
 
-//                BufferedReader bufferReader = new BufferedReader(
-//                        new InputStreamReader(socket.getInputStream()));
-
                 CSMessage received = null;
                 while ((received = (CSMessage)ois.readObject()) != null) {
 
-                    if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
-//                        selectorPrintStream.println(StringConstants.MESSAGE_SHUTDOWN + StringConstants.SPACE);
-//                        selectorPrintStream.flush();
+                    if (received.getMessage().equals(StringConstants.MESSAGE_AGREED))
+                    {
                         CSMessage sent = new CSMessage(StringConstants.ROLE_SHUTDOWNER,
                                                         StringConstants.MESSAGE_SHUTDOWN,
                                                         processId, 0, 0, 0, new HashSet<>());

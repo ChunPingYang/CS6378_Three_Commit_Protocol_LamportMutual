@@ -48,25 +48,9 @@ public class ClientListener implements Runnable{
 
         try {
 
-            //while(true) {
-            //cohortSocket.setSoTimeout(10000);
-
-//            BufferedReader cohortBufferedReader =
-//                    new BufferedReader(
-//                            new InputStreamReader(cohortSocket.getInputStream()));
-//            PrintStream cohortPrintStream = new PrintStream(cohortSocket.getOutputStream());
             ObjectOutputStream oos = new ObjectOutputStream(cohortSocket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(cohortSocket.getInputStream());
 
-//            String inLine = null;
-//            inLine = cohortBufferedReader.readLine();
-//            if(inLine.split(StringConstants.SPACE)[1]
-//                        .startsWith(StringConstants.MESSAGE_REGISTER)) {
-//                // Register itself with the coordinator
-//                cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE
-//                        + InetAddress.getLocalHost().getHostName() + StringConstants.SPACE + serverPort[id] + StringConstants.SPACE + serverPort[id]);
-//                cohortPrintStream.flush();
-//            }
             CSMessage delivered = (CSMessage)ois.readObject();
             if(delivered.getMessage().equals(StringConstants.MESSAGE_REGISTER))
             {
@@ -83,26 +67,33 @@ public class ClientListener implements Runnable{
 
             CSMessage received = null;
             while ((received = (CSMessage)ois.readObject()) != null) {
-                System.out.println(received.toString());
+                //System.out.println(received.toString());
 
 
                 // COMMIT REQ received
                 if (received.getMessage().equals(StringConstants.MESSAGE_COMMIT_REQUEST)) {
 
-//                                System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
+//                  System.out.println("Cohort " + pId + " received COMMIT_REQUEST from Coordinator");
 
                     //Handle request to be synchronized
-                    cohort.request(received); //TODO 送到servers同步
+                    cohort.request(received);
                     String clientId = String.valueOf(received.getClientId());
                     String fileId = String.valueOf(received.getFileId());
-                    while (!data.isAgree(clientId, fileId) && !data.isChannelDisabled()) {
+                    boolean x = data.isAgree(clientId, fileId);
+                    boolean y = data.isChannelDisabled();
+                    while (!x && !y) {
                         System.out.println("waiting server.....");
                         Thread.sleep(500);
+                        x = data.isAgree(clientId, fileId);
+                        y = data.isChannelDisabled();
                     }
-                    if(!data.isChannelDisabled()){data.getAgreeMap().get(clientId).replace(fileId, false);}
+                    if(x && !y){data.getAgreeMap().get(clientId).replace(fileId, false);}
+                    if(y){
+                        data.setChannelDisabled(false);
+                        String file = String.valueOf(received.getFileId());
+                        cohort.getMutexes().get(file).getMessageQueue().clear();
+                    }
 
-//                    cohortPrintStream.println(StringConstants.MESSAGE_AGREED + StringConstants.SPACE + serverPort[id]);
-//                    cohortPrintStream.flush();
                         CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                 StringConstants.MESSAGE_AGREED,
                                                 received.getProcessId(),
@@ -113,8 +104,8 @@ public class ClientListener implements Runnable{
                         oos.writeObject(sent);
                         oos.flush();
 
-//                                System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
-//                                System.out.println("Transition between the states for Cohort is : q" + pId
+//                  System.out.println("Cohort " + pId + " sent AGREED to the Coordinator");
+//                  System.out.println("Transition between the states for Cohort is : q" + pId
 //                                        + " --> w" + pId);
                 }
 
@@ -123,10 +114,8 @@ public class ClientListener implements Runnable{
                         && !sentAck)
                 {
 
-//                                System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
+//                  System.out.println("Cohort " + pId + " received PREPARE from the Coordinator");
 
-//                    cohortPrintStream.println(StringConstants.MESSAGE_ACK + StringConstants.SPACE + serverPort[id]);
-//                    cohortPrintStream.flush();
                     sentAck = true;
 
                     CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
@@ -139,7 +128,7 @@ public class ClientListener implements Runnable{
                     oos.writeObject(sent);
                     oos.flush();
 
-//                                System.out.println("Cohort " + pId + " sent ACK to the Coordinator");
+//                  System.out.println("Cohort " + pId + " sent ACK to the Coordinator");
                 }
 
                 // Commit Message received
@@ -151,12 +140,10 @@ public class ClientListener implements Runnable{
                     int n_time = received.getN_time();
                     int clientId = received.getClientId();
                     outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server" + pId + "/file" + fileId);
-                    fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + n_time);
+                    fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + "Sequence#" +n_time);
 
                     isCommitted = true;
 
-//                    cohortPrintStream.println(StringConstants.MESSAGE_COMMIT_COMPLETE + StringConstants.SPACE + serverPort[id]);
-//                    cohortPrintStream.flush();
                     CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                     StringConstants.MESSAGE_COMMIT_COMPLETE,
                                                     received.getProcessId(),
@@ -167,13 +154,12 @@ public class ClientListener implements Runnable{
                     oos.writeObject(sent);
                     oos.flush();
 
-//                                System.out.println("After COMMIT, transition between the states for Cohort is : p"
+//                  System.out.println("After COMMIT, transition between the states for Cohort is : p"
 //                                                + pId + " --> c" + pId);
 //
-//                                System.out.println();
-//                                System.out.println("...Cohort Terminates...");
-//                                System.err.println();
-
+//                  System.out.println();
+//                  System.out.println("...Cohort Terminates...");
+//                  System.err.println();
 
                 }
 
@@ -184,8 +170,7 @@ public class ClientListener implements Runnable{
                     if (outputFile.exists()) {
                         boolean isExist = fileAccessor.readFileAndValidateExist(outputFile);
                         if (!isExist) {
-//                            cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
-//                            cohortPrintStream.flush();
+
                             CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                             StringConstants.MESSAGE_FILE_NOT_EXIST,
                                                             received.getProcessId(),
@@ -197,8 +182,7 @@ public class ClientListener implements Runnable{
                             oos.flush();
                         }
                     } else {
-//                            cohortPrintStream.println(StringConstants.MESSAGE_FILE_NOT_EXIST + StringConstants.SPACE);
-//                            cohortPrintStream.flush();
+
                             CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                             StringConstants.MESSAGE_FILE_NOT_EXIST,
                                                             received.getProcessId(),
@@ -214,16 +198,8 @@ public class ClientListener implements Runnable{
                 }
 
                 if (received.getMessage().equals(StringConstants.MESSAGE_SHUTDOWN)) {
-//                        cohortSocket.shutdownInput();
-//                        cohortSocket.shutdownOutput();
-//                        cohortSocket.close();
-
-                    //System.out.println("after close....");
-                    //System.out.println("after disabled...");
-                    //System.out.println("shut down.....");
+                    System.out.println("shut down.....");
                     cohortListener.close();
-//                    cohort.initAfterChannelDisabled();
-//                    data.setChannelDisabled(true);
                 }
 
 
@@ -242,22 +218,8 @@ public class ClientListener implements Runnable{
             System.out.println("Inputstream status: " + cohortSocket.isInputShutdown());
         } catch (IOException e) {
             e.printStackTrace();
-//            try {
-//                data.setChannelDisabled(true);
-//                cohortListener.close();
-//                cohort.initAfterChannelDisabled();
-//            }catch (IOException ex){
-//                ex.printStackTrace();
-//            }
         } catch (Exception e) {
             e.printStackTrace();
-//            try {
-//                data.setChannelDisabled(true);
-//                cohortListener.close();
-//                cohort.initAfterChannelDisabled();
-//            }catch (IOException ex){
-//                ex.printStackTrace();
-//            }
         }
     }
 

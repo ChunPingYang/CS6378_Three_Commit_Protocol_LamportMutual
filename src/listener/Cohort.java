@@ -3,14 +3,11 @@ package listener;
 import model.*;
 import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
-
 import java.io.*;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Cohort {
@@ -18,12 +15,6 @@ public class Cohort {
      * Variables to establish a connection with coordinator and neighboring
      * process
      */
-    private int PORT = 5005;
-    private int coordinatorPort = 9001;
-
-    //private Socket cohortSocket = null;
-    //private BufferedReader cohortBufferedReader = null;
-    //private PrintStream cohortPrintStream = null;
     private ServerSocket cohortListener = null;
 
     /**
@@ -52,12 +43,6 @@ public class Cohort {
     private String state;
     private SharedDataAmongCohortCoordThreads data;
 
-//    private Map<String,LamportClock> clocks;
-//    private Map<String, LamportMutex> mutexes;
-//    private Map<Integer,Socket> incomingNeibs;
-//    private Map<Integer,Socket> outcomingNeibs;
-//    private Map<Integer,ObjectInputStream> incomingChannels;
-//    private Map<Integer,ObjectOutputStream> outcomingChannels;
     private ConcurrentHashMap<String,LamportClock> clocks;
     private ConcurrentHashMap<String, LamportMutex> mutexes;
     private ConcurrentHashMap<Integer,Socket> incomingNeibs;
@@ -123,14 +108,7 @@ public class Cohort {
     }
 
     public void initServerToServer(int[] ids, int id){
-        //numNeighbors = ids.length-1;
-//        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
-////        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
-////        incomingChannels = Collections.synchronizedMap(new HashMap<>());
-////        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
-////        neighbors = Collections.synchronizedSet(new HashSet<>());
-////        clocks = Collections.synchronizedMap(new HashMap<>());
-////        mutexes =  Collections.synchronizedMap(new HashMap<>());
+
         incomingNeibs = new ConcurrentHashMap<>();
         outcomingNeibs = new ConcurrentHashMap<>();
         incomingChannels = new ConcurrentHashMap<>();
@@ -163,7 +141,7 @@ public class Cohort {
                     @Override
                     public void run() {
                         boolean isConnected = false;
-                        while(!isConnected && !data.isChannelDisabled()){
+                        while(!isConnected){
                             try {
                                 // connect to other servers
                                 Socket socket = new Socket(serverAdd[other], serverPort[other]);
@@ -179,6 +157,7 @@ public class Cohort {
                                 }
                                 System.out.println("waiting for other servers to start");
                                 isConnected = false;
+                                data.setChannelDisabled(true);
                             }
                         }
                     }
@@ -205,27 +184,21 @@ public class Cohort {
                 new Thread(new ServerListenner(this,incomingChannels.get(ids[i]))).start();
         }
 
+        data.setChannelDisabled(false);
         System.out.println("get Incoming neibors ready!");
         System.out.println("server connections ready!");
 
     }
 
     public synchronized void initAfterChannelDisabled(){
-        data = new SharedDataAmongCohortCoordThreads(maxCoordinator);
-//        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
-//        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
-//        incomingChannels = Collections.synchronizedMap(new HashMap<>());
-//        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
-//        neighbors = Collections.synchronizedSet(new HashSet<>());
-//        clocks = Collections.synchronizedMap(new HashMap<>());
-//        mutexes =  Collections.synchronizedMap(new HashMap<>());
-        incomingNeibs = new ConcurrentHashMap<>();
-        outcomingNeibs = new ConcurrentHashMap<>();
-        incomingChannels = new ConcurrentHashMap<>();
-        outcomingChannels = new ConcurrentHashMap<>();
-        neighbors = ConcurrentHashMap.newKeySet();
-        clocks = new ConcurrentHashMap<>();
-        mutexes = new ConcurrentHashMap<>();
+        //data = new SharedDataAmongCohortCoordThreads(maxCoordinator);
+        //incomingNeibs = new ConcurrentHashMap<>();
+        //outcomingNeibs = new ConcurrentHashMap<>();
+        //incomingChannels = new ConcurrentHashMap<>();
+        //outcomingChannels = new ConcurrentHashMap<>();
+        //neighbors = ConcurrentHashMap.newKeySet();
+        //clocks = new ConcurrentHashMap<>();
+        //mutexes = new ConcurrentHashMap<>();
     }
 
     /**
@@ -234,8 +207,6 @@ public class Cohort {
     public void start(int currentServerId) {
 
         try {
-
-            //FileAccessor fileAccessor = new FileAccessor();
 
             while(true) {
                 Socket cohortSocket = cohortListener.accept();
@@ -247,7 +218,7 @@ public class Cohort {
             System.out.println(" ");
             System.out.println(e.getMessage());
             data.setChannelDisabled(true);
-            initAfterChannelDisabled();
+            //initAfterChannelDisabled();
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -279,7 +250,7 @@ public class Cohort {
     // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
     // if it is empty, do request and broadcast
     public void request(CSMessage message) throws InterruptedException, IOException {
-        System.err.println("request: "+message.toString());
+        //System.err.println("request: "+message.toString());
         String processId = String.valueOf(message.getProcessId());
         String clientId = String.valueOf(message.getClientId());
         String fileId = String.valueOf(message.getFileId());
@@ -390,5 +361,13 @@ public class Cohort {
 
     public void setMaxCoordinator(int maxCoordinator){
         this.maxCoordinator = maxCoordinator;
+    }
+
+    public SharedDataAmongCohortCoordThreads getData() {
+        return data;
+    }
+
+    public ConcurrentHashMap<String, LamportMutex> getMutexes() {
+        return mutexes;
     }
 }

@@ -4,11 +4,9 @@ import model.CSMessage;
 import model.StringConstants;
 import utility.FileAccessor;
 import utility.SharedDataAmongCoordThreads;
-
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.HashSet;
 import java.util.Set;
 
 public class CoordinatorServerHandler{
@@ -19,7 +17,6 @@ public class CoordinatorServerHandler{
     private Socket cohortSocket = null;
     private PrintWriter printWriter = null;
     private DataInputStream dataInputStream = null;
-    //private BufferedReader bufferReader = null;
     private ObjectInputStream ois = null;
     private ObjectOutputStream oos = null;
 
@@ -91,9 +88,6 @@ public class CoordinatorServerHandler{
         isCommitRequest = false;
         isPrepareSentToAllCohorts = false;
 
-//        stateLogFile = new File(System.getProperty("user.dir") + "/StateInfo_Coordinator");
-//        outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server"+pId+"/file"+fileId);
-
         fileaccessor = new FileAccessor();
     }
 
@@ -102,22 +96,13 @@ public class CoordinatorServerHandler{
 
         try {
 
-                //oos = new ObjectOutputStream(cohortSocket.getOutputStream());
-
                 while (true) {
 
                     //isCommitRequest: send commit_request
                     if (sharedDataAmongCoordThreads.isCommitRequest() && !isCommitRequest && !coordinatorFail) {
 
                         isCommitRequest = true;
-//                        printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-//                                            StringConstants.MESSAGE_COMMIT_REQUEST + StringConstants.SPACE +
-//                                            processId + StringConstants.SPACE +
-//                                            clientId + StringConstants.SPACE +
-//                                            fileId + StringConstants.SPACE +
-//                                            n_time + StringConstants.SPACE +
-//                                            otherServers[0]+":"+otherServers[1]);
-//                        printWriter.flush();
+
                         CSMessage push = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                         StringConstants.MESSAGE_COMMIT_REQUEST,
                                                         processId,
@@ -141,7 +126,6 @@ public class CoordinatorServerHandler{
 //                                System.out.println("Coordinator received AGREED from "
 //                                        + sharedDataAmongCoordThreads.getCountAgreeFromCohort() + " Cohort");
 
-                                //TODO 要等待所有的伺服器數量
                                 while(sharedDataAmongCoordThreads.getCountAgreeFromCohort() != maxCohort
                                         && !isCommitted) {
                                     Thread.sleep(1000);
@@ -156,10 +140,6 @@ public class CoordinatorServerHandler{
 //                                System.out.println(
 //                                        "Coordinator received AGREED from all Cohorts. Transition from w1 --> p1");
 
-//                                printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-//                                                    StringConstants.MESSAGE_PREPARE + StringConstants.SPACE+
-//                                                    processId);
-//                                printWriter.flush();
                                 CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                                 StringConstants.MESSAGE_PREPARE,
                                                                 processId,
@@ -194,12 +174,6 @@ public class CoordinatorServerHandler{
                                         && !isCommitted && !coordinatorFail) {
                                     isCommitted = true;
 
-//                                    printWriter.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-//                                                        StringConstants.MESSAGE_COMMIT + StringConstants.SPACE +
-//                                                        processId + StringConstants.SPACE +
-//                                                        fileId + StringConstants.SPACE +
-//                                                        n_time + StringConstants.SPACE + clientId);
-//                                    printWriter.flush();
                                         CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                                         StringConstants.MESSAGE_COMMIT,
                                                                         processId,
@@ -271,8 +245,8 @@ public class CoordinatorServerHandler{
                 }
 
             }catch (SocketTimeoutException e){
-                System.out.println("Time out.....");
-                e.getMessage();
+                System.err.println("Time out.....");
+                e.printStackTrace();
             }catch(IOException e){
                 e.printStackTrace();
             }catch(Exception e) {

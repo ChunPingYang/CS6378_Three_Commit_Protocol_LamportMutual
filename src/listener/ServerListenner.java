@@ -19,11 +19,11 @@ public class ServerListenner implements Runnable{
         try {
             // can not new a ObjectInputStream here, one socket can only been initialized with one inputStream
 
-            System.out.println("serverListener "+cohort.getId()+" starts listening");
+            //System.out.println("serverListener "+cohort.getId()+" starts listening");
             while(true){
                 Message received = (Message)ois.readObject();
                 System.out.println("Server receives message from server"+ (Integer.parseInt(received.getFrom()))+
-                                    " Sequence number: "+received.getSeqNum()+
+                                    " Sequence#: "+received.getSeqNum()+
                                     " Client: "+received.getClientId()+
                                     " Type: "+received.getType());
                 cohort.processMessage(received);

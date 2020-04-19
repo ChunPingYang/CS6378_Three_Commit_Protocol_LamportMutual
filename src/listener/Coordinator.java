@@ -1,12 +1,12 @@
 package listener;
 
-import com.sun.tools.javac.util.StringUtils;
 import model.CSMessage;
 import model.StringConstants;
 import utility.SharedDataAmongCoordThreads;
-
 import java.io.*;
-import java.net.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.*;
 
 public class Coordinator {
@@ -80,11 +80,8 @@ public class Coordinator {
      * fileId range from 1 to n
      */
     public void start(int clientId,int fileId, String action) {
-        //initializeArray();
 
-        //int[] servers = selectServer(fileId);
         List<Integer> servers = selectServer1(fileId);
-        //System.out.println(Arrays.toString(servers));
         System.out.println(servers.toString());
 
         if(StringConstants.ACTION_WRITE.equalsIgnoreCase(action))
@@ -150,12 +147,10 @@ public class Coordinator {
 
         try {
 
-            System.out.println("Server: "+serverAdd[servers.get(pidIndex)]+", Port: "+serverPort[servers.get(pidIndex)]);
+            //System.out.println("Server: "+serverAdd[servers.get(pidIndex)]+", Port: "+serverPort[servers.get(pidIndex)]);
             Socket socket = new Socket(serverAdd[servers.get(pidIndex)], serverPort[servers.get(pidIndex)]);
             int processId = servers.get(pidIndex);
-//            PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-//            coordinatorPrintStream.println(StringConstants.MESSAGE_REGISTER + StringConstants.SPACE + processId);
-//            coordinatorPrintStream.flush();
+
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
@@ -169,16 +164,11 @@ public class Coordinator {
             oos.writeObject(push);
             oos.flush();
 
-//            BufferedReader bufferReader = new BufferedReader(
-//                    new InputStreamReader(socket.getInputStream()));
-
             CSMessage received = null;
             while ((received = (CSMessage)ois.readObject()) != null) {
 
                 if (received.getMessage().equals(StringConstants.MESSAGE_AGREED))
                 {
-//                    coordinatorPrintStream.println(StringConstants.ACTION_READ + StringConstants.SPACE + fileId);
-//                    coordinatorPrintStream.flush();
                     CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
                                                     StringConstants.ACTION_READ,
                                                     processId,
@@ -192,7 +182,6 @@ public class Coordinator {
 
                 if(received.getMessage().equals(StringConstants.MESSAGE_FILE_NOT_EXIST)){
                     System.out.println("The file does not exist");
-                    //TODO 關閉socket
                 }
             }
 
@@ -208,14 +197,14 @@ public class Coordinator {
         try {
 
             int n_time = 0;
-            while (n_time++ <= 30) {
+            while (n_time++ <= 20) {
 
                 data.initializeSharedData();
 
                 final int count = n_time;
 
                 // build connections from cohorts
-                System.out.println("Server size: "+servers.size());
+                System.out.println("Sequence number: "+n_time);
                 for (int i = 0; i < servers.size(); i++) {
                     final int pidIndex = i;
                     new Thread(new Runnable() {
@@ -226,13 +215,8 @@ public class Coordinator {
 
 //                              System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                                 Socket socket = new Socket(serverAdd[servers.get(pidIndex)], serverPort[servers.get(pidIndex)]);
-                                //int processId = servers[pidIndex] + 1;
+
                                 int processId = servers.get(pidIndex);
-//                                PrintStream coordinatorPrintStream = new PrintStream(socket.getOutputStream());
-//                                coordinatorPrintStream.println(StringConstants.ROLE_COORDINATOR + StringConstants.SPACE +
-//                                                                StringConstants.MESSAGE_REGISTER + StringConstants.SPACE +
-//                                                                processId);
-//                                coordinatorPrintStream.flush();
 
                                 //the servers sent from current one
                                 Set<Integer> otherServers = new HashSet<>();
@@ -255,17 +239,12 @@ public class Coordinator {
                                 oos.writeObject(sent);
                                 oos.flush();
 
-//                                BufferedReader bufferReader = new BufferedReader(
-//                                        new InputStreamReader(socket.getInputStream()));
-//                                String inLine = bufferReader.readLine();
-
                                 CSMessage received = (CSMessage)ois.readObject();
+
                                 // If received message is AGREED[REGISTER]
                                 if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
 
                                     if (pidIndex + 1 == servers.size()) {
-//                                    CoordinatorClientHandler c = new CoordinatorClientHandler(variable, data);
-//                                    c.start();
                                         data.setCommitMade(true);
                                     }
 
@@ -279,7 +258,6 @@ public class Coordinator {
                                                                     count,
                                                                     otherServers,
                                                                     data).start();
-//                                  System.out.println("Server: "+serverPort[servers[pidIndex]]+" serversCommitStatus: "+data.isServersCommitted());
                                 }
 
 
@@ -288,7 +266,6 @@ public class Coordinator {
 
                             } catch (SocketTimeoutException | ClassNotFoundException e){
                                 e.printStackTrace();
-                                //System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
                             } catch (IOException e) {
                                 e.printStackTrace();
 
@@ -311,20 +288,11 @@ public class Coordinator {
                 boolean serversCommitStatus = false;
                 while (!serversCommitStatus) {
                     serversCommitStatus = data.isServersCommitted();
-                    //System.out.println("serversCommitStatus: "+serversCommitStatus);
-
-                    if (serversCommitStatus) {
-//                        System.out.println("all servers commit........");
-                    }
                 }
 
                 //Thread.sleep(3000);
             }
 
-            /*
-
-            stopConnection();
-*/
         }catch(Exception e){
             e.printStackTrace();
         }
