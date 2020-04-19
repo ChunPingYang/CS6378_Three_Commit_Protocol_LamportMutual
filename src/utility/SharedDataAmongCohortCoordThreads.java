@@ -34,11 +34,11 @@ public class SharedDataAmongCohortCoordThreads {
         return agreeMap.get(clientId).get(fileId);
     }
 
-    public synchronized boolean isChannelDisabled() {
+    public boolean isChannelDisabled() {
         return channelDisabled;
     }
 
-    public synchronized void setChannelDisabled(boolean channelDisabled) {
+    public void setChannelDisabled(boolean channelDisabled) {
         this.channelDisabled = channelDisabled;
     }
 }

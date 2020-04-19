@@ -210,16 +210,20 @@ public class ClientListener implements Runnable{
                             oos.flush();
                     }
 
-                    break;
+                    //break;
                 }
 
                 if (received.getMessage().equals(StringConstants.MESSAGE_SHUTDOWN)) {
 //                        cohortSocket.shutdownInput();
 //                        cohortSocket.shutdownOutput();
 //                        cohortSocket.close();
+
+                    //System.out.println("after close....");
+                    //System.out.println("after disabled...");
+                    //System.out.println("shut down.....");
                     cohortListener.close();
-                    data.setChannelDisabled(true);
-                    cohort.initAfterChannelDisabled();
+//                    cohort.initAfterChannelDisabled();
+//                    data.setChannelDisabled(true);
                 }
 
 
@@ -238,8 +242,22 @@ public class ClientListener implements Runnable{
             System.out.println("Inputstream status: " + cohortSocket.isInputShutdown());
         } catch (IOException e) {
             e.printStackTrace();
+//            try {
+//                data.setChannelDisabled(true);
+//                cohortListener.close();
+//                cohort.initAfterChannelDisabled();
+//            }catch (IOException ex){
+//                ex.printStackTrace();
+//            }
         } catch (Exception e) {
             e.printStackTrace();
+//            try {
+//                data.setChannelDisabled(true);
+//                cohortListener.close();
+//                cohort.initAfterChannelDisabled();
+//            }catch (IOException ex){
+//                ex.printStackTrace();
+//            }
         }
     }
 

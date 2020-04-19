@@ -11,6 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Cohort {
     /**
@@ -51,12 +52,18 @@ public class Cohort {
     private String state;
     private SharedDataAmongCohortCoordThreads data;
 
-    private Map<String,LamportClock> clocks;
-    private Map<String, LamportMutex> mutexes;
-    private Map<Integer,Socket> incomingNeibs;
-    private Map<Integer,Socket> outcomingNeibs;
-    private Map<Integer,ObjectInputStream> incomingChannels;
-    private Map<Integer,ObjectOutputStream> outcomingChannels;
+//    private Map<String,LamportClock> clocks;
+//    private Map<String, LamportMutex> mutexes;
+//    private Map<Integer,Socket> incomingNeibs;
+//    private Map<Integer,Socket> outcomingNeibs;
+//    private Map<Integer,ObjectInputStream> incomingChannels;
+//    private Map<Integer,ObjectOutputStream> outcomingChannels;
+    private ConcurrentHashMap<String,LamportClock> clocks;
+    private ConcurrentHashMap<String, LamportMutex> mutexes;
+    private ConcurrentHashMap<Integer,Socket> incomingNeibs;
+    private ConcurrentHashMap<Integer,Socket> outcomingNeibs;
+    private ConcurrentHashMap<Integer,ObjectInputStream> incomingChannels;
+    private ConcurrentHashMap<Integer,ObjectOutputStream> outcomingChannels;
     private Set<Integer> neighbors;
     private static int numNeighbors;
 
@@ -117,13 +124,20 @@ public class Cohort {
 
     public void initServerToServer(int[] ids, int id){
         //numNeighbors = ids.length-1;
-        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
-        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
-        incomingChannels = Collections.synchronizedMap(new HashMap<>());
-        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
-        neighbors = Collections.synchronizedSet(new HashSet<>());
-        clocks = Collections.synchronizedMap(new HashMap<>());
-        mutexes =  Collections.synchronizedMap(new HashMap<>());
+//        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
+////        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
+////        incomingChannels = Collections.synchronizedMap(new HashMap<>());
+////        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
+////        neighbors = Collections.synchronizedSet(new HashSet<>());
+////        clocks = Collections.synchronizedMap(new HashMap<>());
+////        mutexes =  Collections.synchronizedMap(new HashMap<>());
+        incomingNeibs = new ConcurrentHashMap<>();
+        outcomingNeibs = new ConcurrentHashMap<>();
+        incomingChannels = new ConcurrentHashMap<>();
+        outcomingChannels = new ConcurrentHashMap<>();
+        neighbors =  ConcurrentHashMap.newKeySet();
+        clocks = new ConcurrentHashMap<>();
+        mutexes = new ConcurrentHashMap<>();
 
         //TODO file list hard code
         String[] a = new String[]{"1","2","3","4","5"};
@@ -172,7 +186,7 @@ public class Cohort {
             }
         }
 
-        for(int i=0;i<ids.length;i++){
+        for (int i = 0; i < ids.length; i++) {
             try {
                 if (ids[i] != id) {
                     Socket socket = cohortListener.accept();
@@ -198,13 +212,20 @@ public class Cohort {
 
     public synchronized void initAfterChannelDisabled(){
         data = new SharedDataAmongCohortCoordThreads(maxCoordinator);
-        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
-        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
-        incomingChannels = Collections.synchronizedMap(new HashMap<>());
-        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
-        neighbors = Collections.synchronizedSet(new HashSet<>());
-        clocks = Collections.synchronizedMap(new HashMap<>());
-        mutexes =  Collections.synchronizedMap(new HashMap<>());
+//        incomingNeibs = Collections.synchronizedMap(new HashMap<>());
+//        outcomingNeibs =  Collections.synchronizedMap(new HashMap<>());
+//        incomingChannels = Collections.synchronizedMap(new HashMap<>());
+//        outcomingChannels = Collections.synchronizedMap(new HashMap<>());
+//        neighbors = Collections.synchronizedSet(new HashSet<>());
+//        clocks = Collections.synchronizedMap(new HashMap<>());
+//        mutexes =  Collections.synchronizedMap(new HashMap<>());
+        incomingNeibs = new ConcurrentHashMap<>();
+        outcomingNeibs = new ConcurrentHashMap<>();
+        incomingChannels = new ConcurrentHashMap<>();
+        outcomingChannels = new ConcurrentHashMap<>();
+        neighbors = ConcurrentHashMap.newKeySet();
+        clocks = new ConcurrentHashMap<>();
+        mutexes = new ConcurrentHashMap<>();
     }
 
     /**
@@ -225,6 +246,8 @@ public class Cohort {
         }catch(IOException e){
             System.out.println(" ");
             System.out.println(e.getMessage());
+            data.setChannelDisabled(true);
+            initAfterChannelDisabled();
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -255,7 +278,7 @@ public class Cohort {
 
     // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
     // if it is empty, do request and broadcast
-    public synchronized void request(CSMessage message) throws InterruptedException, IOException {
+    public void request(CSMessage message) throws InterruptedException, IOException {
         System.err.println("request: "+message.toString());
         String processId = String.valueOf(message.getProcessId());
         String clientId = String.valueOf(message.getClientId());
@@ -270,10 +293,6 @@ public class Cohort {
             System.err.println("Last request not finished......");
             Thread.sleep(1000);
         }
-
-//        HashSet<Integer> otherServers = new HashSet<>();
-//        otherServers.add(Integer.parseInt(othersCohorts.split(":")[0]));
-//        otherServers.add(Integer.parseInt(othersCohorts.split(":")[1]));
 
         Message request = new Message(clock.getClock(),
                                         processId,

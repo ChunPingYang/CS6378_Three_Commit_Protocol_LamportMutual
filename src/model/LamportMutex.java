@@ -30,12 +30,16 @@ public class LamportMutex {
 
     public synchronized Message headMessage(){ return messageQueue.get(0); }
 
-    public synchronized void makeRequest(Message request) throws IOException {
+    public synchronized List<Message> getMessageQueue(){ return messageQueue;}
+
+    public void makeRequest(Message request) throws IOException {
         if(!messageQueue.isEmpty() || sendRequest) {
             System.err.println("last request not finished");
             return;
         }
-        messageQueue.add(request);
+        synchronized (messageQueue) {
+            messageQueue.add(request);
+        }
         System.err.println("after adding to queue request: "+request.toString());
 
         pendingReplies = Collections.synchronizedSet(request.getNeighbors());
@@ -58,16 +62,27 @@ public class LamportMutex {
         return !sendRequest;
     }
 
-    public synchronized Message getRequest(Message request) throws InterruptedException{
+    public Message getRequest(Message request) throws InterruptedException{
         if(!request.getType().equals(StringConstants.LAMPORT_REQUEST)){
             System.err.println("it's not a request!");
             return null;
         }
 
-        while(messageQueue.isEmpty()){
+        boolean x;
+        synchronized(messageQueue){
+            x = messageQueue.isEmpty();
+        }
+        while(x){
             System.err.println("Message Queue is Empty");
             Thread.sleep(1000);
+            synchronized(messageQueue){
+                System.err.println("queue....");
+                x = messageQueue.isEmpty();
+            }
         }
+//        while(messageQueue.isEmpty()){
+//            Thread.sleep(1000);
+//        }
 
         while(!headMessage().getRole().equals(StringConstants.ROLE_COORDINATOR)){
             System.err.println("Message is not from coordinator");
