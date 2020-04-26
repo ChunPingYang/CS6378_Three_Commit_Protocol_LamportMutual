@@ -205,8 +205,13 @@ public class Coordinator {
 
                 // build connections from cohorts
                 System.out.println("Sequence number: "+n_time);
-                for (int i = 0; i < servers.size(); i++) {
-                    final int pidIndex = i;
+                //for (int i = 0; i < servers.size(); i++) {
+                int min = Integer.MAX_VALUE;
+                for(Integer idx:servers){
+                    min = Math.min(min,idx);
+                }
+                final int primayIndex = min;
+                    //final int pidIndex = i;
                     new Thread(new Runnable() {
 
                         @Override
@@ -214,14 +219,14 @@ public class Coordinator {
                             try {
 
 //                              System.out.println(serverAdd[servers[pidIndex]] + ", " + serverPort[servers[pidIndex]]);
-                                Socket socket = new Socket(serverAdd[servers.get(pidIndex)], serverPort[servers.get(pidIndex)]);
+                                Socket socket = new Socket(serverAdd[primayIndex], serverPort[primayIndex]);
 
-                                int processId = servers.get(pidIndex);
+                                int processId = primayIndex;
 
                                 //the servers sent from current one
                                 Set<Integer> otherServers = new HashSet<>();
                                 for(int i=0;i<servers.size();i++){
-                                    if(i!=pidIndex){
+                                    if(servers.get(i)!=primayIndex){
                                         otherServers.add(servers.get(i));
                                     }
                                 }
@@ -244,12 +249,12 @@ public class Coordinator {
                                 // If received message is AGREED[REGISTER]
                                 if (received.getMessage().equals(StringConstants.MESSAGE_AGREED)) {
 
-                                    if (pidIndex + 1 == servers.size()) {
+                                    //if (pidIndex + 1 == servers.size()) {
                                         data.setCommitMade(true);
-                                    }
+                                    //}
 
                                     new CoordinatorServerHandler(socket,
-                                                                    servers.size(),
+                                                                    1,
                                                                     ois,
                                                                     oos,
                                                                     processId,
@@ -270,7 +275,7 @@ public class Coordinator {
                                 e.printStackTrace();
 
                                 //impose let others channel works
-                                servers.remove(pidIndex);
+                                //servers.remove(pidIndex);
                                 data.setCommitMade(true);
                                 data.incrementAgree();
                                 data.incrementAck();
@@ -282,7 +287,7 @@ public class Coordinator {
 
                     }).start();
 
-                }
+                //}
 
                 //used to validate all servers done commit
                 boolean serversCommitStatus = false;

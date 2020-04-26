@@ -91,7 +91,7 @@ public class ClientListener implements Runnable{
                     if(y){
                         data.setChannelDisabled(false);
                         String file = String.valueOf(received.getFileId());
-                        cohort.getMutexes().get(file).getMessageQueue().clear();
+                        //cohort.getMutexes().get(file).getMessageQueue().clear();
                     }
 
                         CSMessage sent = new CSMessage(StringConstants.ROLE_COORDINATOR,
@@ -139,8 +139,13 @@ public class ClientListener implements Runnable{
                     int fileId = received.getFileId();
                     int n_time = received.getN_time();
                     int clientId = received.getClientId();
+
                     outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server" + pId + "/file" + fileId);
-                    fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId + " State: " + StringConstants.STATE_W + StringConstants.SPACE + "Server#: " + pId + StringConstants.SPACE + "File#: " + fileId + StringConstants.SPACE + "Sequence#" +n_time);
+                    fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId +
+                            " State: " + StringConstants.STATE_W + StringConstants.SPACE +
+                            "Server#: " + pId + StringConstants.SPACE +
+                            "File#: " + fileId + StringConstants.SPACE +
+                            "Sequence#: " + n_time);
 
                     isCommitted = true;
 

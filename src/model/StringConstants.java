@@ -40,5 +40,6 @@ public class StringConstants {
 
 	public static final String LAMPORT_REQUEST = "REQUEST";
 	public static final String LAMPORT_REPLY = "REPLY";
+	public static final String LAMPORT_RELEASE = "RELEASE";
 
 }

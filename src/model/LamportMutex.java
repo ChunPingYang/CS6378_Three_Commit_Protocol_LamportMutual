@@ -1,5 +1,6 @@
 package model;
 
+import compare.LamportMessage;
 import listener.Cohort;
 import utility.SharedDataAmongCohortCoordThreads;
 
@@ -9,12 +10,12 @@ import java.util.*;
 public class LamportMutex {
 
     // once a request is sent, do not send request until the last request is done
-    private volatile boolean sendRequest = false;
-    private volatile List<Message> messageQueue;
+    private boolean sendRequest = false;
+    private List<Message> messageQueue;
     // a set to store replies needed from neighbors to enter critical section
     private Set<Integer> pendingReplies;
     // a set to store requests needed from neighbors to enter critical section
-    private Set<Integer> pendingRequests;
+    //private Set<Integer> pendingRequests;
     private Cohort cohort;
 
     public LamportMutex(Cohort cohort){
@@ -28,34 +29,49 @@ public class LamportMutex {
         });
     }
 
-    public synchronized Message headMessage(){ return messageQueue.get(0); }
+    public Message headMessage(){ return messageQueue.get(0); }
 
-    public synchronized List<Message> getMessageQueue(){ return messageQueue;}
+    //public synchronized List<Message> getMessageQueue(){ return messageQueue;}
 
-    public void makeRequest(Message request) throws IOException {
+    public synchronized void makeRequest(Message request) throws IOException {
         if(!messageQueue.isEmpty() || sendRequest) {
             System.err.println("last request not finished");
             return;
         }
-        synchronized (messageQueue) {
+//        synchronized (messageQueue) {
             messageQueue.add(request);
-        }
+//        }
         //System.err.println("after adding to queue request: "+messageQueue.size());
 
-        pendingReplies = Collections.synchronizedSet(request.getNeighbors());
-        pendingRequests = Collections.synchronizedSet(request.getNeighbors());
+        Set<Integer> set = new HashSet<>(request.getNeighbors());
+        pendingReplies = Collections.synchronizedSet(set);
+        //pendingRequests = Collections.synchronizedSet(request.getNeighbors());
         cohort.broadcast(request);
         sendRequest = true;
     }
 
-    public synchronized void release(Message message,SharedDataAmongCohortCoordThreads data) throws IOException {
-        String clientId = message.getClientId();
-        String fileId = message.getFileId();
-        Map<String,Map<String,Boolean>> agreeMap = data.getAgreeMap();
-        agreeMap.get(clientId).replace(fileId,true); //can deliver "agree" message to coordinator
+    public synchronized void release(int clock,SharedDataAmongCohortCoordThreads data) throws IOException {
+//        String clientId = message.getClientId();
+//        String fileId = message.getFileId();
 
-        messageQueue.remove(0);
+        Message toRelease = messageQueue.remove(0);
         sendRequest = false;
+
+        Map<String,Map<String,Boolean>> agreeMap = data.getAgreeMap();
+        agreeMap.get(toRelease.getClientId()).replace(toRelease.getFileId(),true); //can deliver "agree" message to coordinator
+
+        //TODO 這邊有點奇怪
+        Message toSend = new Message(clock,
+                                    String.valueOf(cohort.getId()),
+                                    toRelease.getTo(),
+                                    StringConstants.LAMPORT_RELEASE,
+                                    toRelease.getClientId(),
+                                    toRelease.getFileId(),
+                                    toRelease.getSeqNum(),
+                                    StringConstants.ROLE_COHORT,
+                                    toRelease.getNeighbors());
+
+        cohort.broadcast(toSend);
     }
 
     public synchronized boolean isAvailable(){
@@ -68,38 +84,40 @@ public class LamportMutex {
             return null;
         }
 
-        boolean x;
-//        synchronized(messageQueue){
-            x = messageQueue.isEmpty();
+//        boolean x;
+////        synchronized(messageQueue){
+//            x = messageQueue.isEmpty();
+////        }
+//        while(x){
+//            System.err.println("Message Queue is Empty");
+//            Thread.sleep(1000);
+////            synchronized(messageQueue){
+////                x = messageQueue.isEmpty();
+////            }
+//            x = messageQueue.isEmpty();
 //        }
-        while(x){
-            System.err.println("Message Queue is Empty");
-            Thread.sleep(1000);
-//            synchronized(messageQueue){
-//                x = messageQueue.isEmpty();
-//            }
-            x = messageQueue.isEmpty();
-        }
+//
+//        while(!headMessage().getRole().equals(StringConstants.ROLE_COORDINATOR)){
+//            System.err.println("Message is not from coordinator");
+//            Thread.sleep(500);
+//        }
+//
+//        Message head = headMessage();
+//        boolean y = head.getClientId().equals(request.getClientId())
+//                        && head.getFileId().equals(request.getFileId())
+//                        && head.getSeqNum().equals(request.getSeqNum());
+//        while(!y)
+//        {
+//            System.err.println("the head message is not the same as request");
+//            Thread.sleep(1000);
+//            y = head.getClientId().equals(request.getClientId())
+//                    && head.getFileId().equals(request.getFileId())
+//                    && head.getSeqNum().equals(request.getSeqNum());
+//        }
+//
+//        pendingRequests.remove(Integer.parseInt(request.getFrom()));
 
-        while(!headMessage().getRole().equals(StringConstants.ROLE_COORDINATOR)){
-            System.err.println("Message is not from coordinator");
-            Thread.sleep(500);
-        }
-
-        Message head = headMessage();
-        boolean y = head.getClientId().equals(request.getClientId())
-                        && head.getFileId().equals(request.getFileId())
-                        && head.getSeqNum().equals(request.getSeqNum());
-        while(!y)
-        {
-            System.err.println("the head message is not the same as request");
-            Thread.sleep(1000);
-            y = head.getClientId().equals(request.getClientId())
-                    && head.getFileId().equals(request.getFileId())
-                    && head.getSeqNum().equals(request.getSeqNum());
-        }
-
-        pendingRequests.remove(Integer.parseInt(request.getFrom()));
+        messageQueue.add(request);
 
         Message reply = new Message(cohort.getClocks().get(request.getFileId()).getClock(),
                 request.getTo(),
@@ -123,10 +141,23 @@ public class LamportMutex {
 
     }
 
+    public synchronized void getRelease(Message release) throws IOException {
+        if (release.getType().equals(StringConstants.LAMPORT_RELEASE)){
+            // if receives a release message, should also write to file
+            cohort.append_to_file(release.getFileId(),release.getClientId(),release.getSeqNum());
+            Message top = messageQueue.remove(0);
+            if(!top.getFrom().equals(release.getFrom())) {
+                System.err.println("message not equal!");
+            }
+        }
+        else{
+            System.err.println("it's not a release!");
+        }
+    }
+
     public synchronized boolean canEnterCriticalSection(){
         String pId = String.valueOf(cohort.getId());
-        if(sendRequest && pendingReplies.isEmpty() && pendingRequests.isEmpty()
-                        && (!messageQueue.isEmpty() && messageQueue.get(0).getFrom().equals(pId))){
+        if(sendRequest && pendingReplies.isEmpty() && (!messageQueue.isEmpty() && messageQueue.get(0).getFrom().equals(pId))){
             return true;
         }
         return false;

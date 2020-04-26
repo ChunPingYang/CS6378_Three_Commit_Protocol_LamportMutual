@@ -1,5 +1,6 @@
 package listener;
 
+import compare.LamportMessage;
 import model.*;
 import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
@@ -108,7 +109,7 @@ public class Cohort {
     }
 
     public void initServerToServer(int[] ids, int id){
-
+        numNeighbors = ids.length-1;
         incomingNeibs = new ConcurrentHashMap<>();
         outcomingNeibs = new ConcurrentHashMap<>();
         incomingChannels = new ConcurrentHashMap<>();
@@ -124,6 +125,7 @@ public class Cohort {
             clocks.put(fileId,new LamportClock());
             mutexes.put(fileId,new LamportMutex(this));
         }
+        numNeighbors = this.serverAdd.length-1;
 
         try {
             cohortListener = new ServerSocket(serverPort[id]);
@@ -318,6 +320,9 @@ public class Cohort {
             case StringConstants.LAMPORT_REPLY:
                 mutex.getReply(received,data);
                 break;
+            case StringConstants.LAMPORT_RELEASE:
+                mutex.getRelease(received);
+                break;
             default:
                 System.err.println("not correct type!");
                 break;
@@ -326,7 +331,7 @@ public class Cohort {
 
         // after receive reply message, server might go to critical section
         if(mutex.canEnterCriticalSection()){
-            mutex.release(received,data); //release resource, move to the next request
+            executeCriticalSection(mutex); //release resource, move to the next request
         }
     }
 
@@ -338,6 +343,28 @@ public class Cohort {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    // critical section execution is not concurrent
+    public void executeCriticalSection(LamportMutex mutex) throws IOException {
+        Message toProcess = mutex.headMessage();
+        String fileId = toProcess.getFileId();
+        System.out.println("server execute critical section for file "+fileId);
+        //append_to_file(fileName,toProcess.getContent());
+        LamportClock clock = clocks.get(fileId);
+        clock.increment();
+        mutex.release(clock.getClock(),data);
+
+    }
+
+    public void append_to_file(String fileId,String clientId,String n_time){
+        outputFile = new File(System.getProperty("user.dir") + "/src/resources/Server" + (pId+1) + "/file" + fileId);
+        fileAccessor.writeToOutputFile1(outputFile, "Client: " + clientId +
+                " State: " + StringConstants.STATE_W + StringConstants.SPACE +
+                "Server#: " + (pId+1) + StringConstants.SPACE +
+                "File#: " + fileId + StringConstants.SPACE +
+                "Sequence#: " + n_time);
     }
 
     /**

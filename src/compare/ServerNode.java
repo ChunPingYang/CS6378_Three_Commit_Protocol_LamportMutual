@@ -133,7 +133,7 @@ public class ServerNode {
 
     // when ClientListener receives a message from a client, first try to check if the critical section of giving file is available
     // if it is empty, do request and broadcast
-    public  void request(CSMessage received) throws InterruptedException, IOException {
+    public void request(CSMessage received) throws InterruptedException, IOException {
         int fileNumber = received.getFileNumber();
         String fileName = fileList.get(fileNumber);
         LamportClock clock = clocks.get(fileName);
