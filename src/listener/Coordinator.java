@@ -210,6 +210,10 @@ public class Coordinator {
                 for(Integer idx:servers){
                     min = Math.min(min,idx);
                 }
+                if(servers.size()<=1){
+                    System.err.println("Quorum voting not sufficient...abort...");
+                    break;
+                }
                 final int primayIndex = min;
                     //final int pidIndex = i;
                     new Thread(new Runnable() {
@@ -275,7 +279,7 @@ public class Coordinator {
                                 e.printStackTrace();
 
                                 //impose let others channel works
-                                //servers.remove(pidIndex);
+                                servers.remove(primayIndex);
                                 data.setCommitMade(true);
                                 data.incrementAgree();
                                 data.incrementAck();
