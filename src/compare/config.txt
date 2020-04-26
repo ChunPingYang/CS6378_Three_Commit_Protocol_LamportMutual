@@ -1,3 +1,0 @@
-server1 dc01.utdallas.edu
-server2 dc02.utdallas.edu
-server3 dc03.utdallas.edu
