@@ -1,6 +1,5 @@
 package model;
 
-import compare.LamportMessage;
 import listener.Cohort;
 import utility.SharedDataAmongCohortCoordThreads;
 

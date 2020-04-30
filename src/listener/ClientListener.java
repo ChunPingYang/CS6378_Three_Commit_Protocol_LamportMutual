@@ -67,7 +67,7 @@ public class ClientListener implements Runnable{
 
             CSMessage received = null;
             while ((received = (CSMessage)ois.readObject()) != null) {
-                //System.out.println(received.toString());
+                System.out.println(received.toString());
 
 
                 // COMMIT REQ received

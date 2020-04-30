@@ -30,7 +30,7 @@ public class ServerSelector {
 
                 System.out.println(serverAdd[id] + ", " + serverPort[id]);
                 Socket socket = new Socket(serverAdd[id], serverPort[id]);
-                socket.setSoTimeout(5000);
+                //socket.setSoTimeout(5000);
                 int processId = id;
 
                 ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());

@@ -1,6 +1,5 @@
 package listener;
 
-import compare.LamportMessage;
 import model.*;
 import utility.FileAccessor;
 import utility.SharedDataAmongCohortCoordThreads;
